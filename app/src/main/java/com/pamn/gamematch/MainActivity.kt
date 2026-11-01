@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pamn.gamematch.ui.auth.LoginScreen
 import com.pamn.gamematch.ui.auth.SignUpScreen
+import com.pamn.gamematch.ui.swipe.SwipeScreen
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,23 +28,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GameMatchTheme {
-                // Estado simple para alternar entre pantallas de autenticación
                 var currentScreen by remember { mutableStateOf("login") }
 
                 when (currentScreen) {
                     "login" -> LoginScreen(
-                        onLoginSuccess = {
-                            Toast.makeText(this, "¡Sesión Iniciada!", Toast.LENGTH_SHORT).show()
-                            // Aquí cambiaremos a SwipeScreen más adelante
-                        },
+                        onLoginSuccess = { currentScreen = "swipe" },
                         onNavigateToSignUp = { currentScreen = "signup" }
                     )
                     "signup" -> SignUpScreen(
-                        onSignUpSuccess = {
-                            Toast.makeText(this, "¡Usuario registrado correctamente!", Toast.LENGTH_SHORT).show()
-                            currentScreen = "login"
-                        },
+                        onSignUpSuccess = { currentScreen = "swipe" },
                         onNavigateToLogin = { currentScreen = "login" }
+                    )
+                    "swipe" -> SwipeScreen(
+                        onNavigateToProfile = { /* Proximamente: Perfil */ }
                     )
                 }
             }

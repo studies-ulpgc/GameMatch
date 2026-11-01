@@ -5,5 +5,6 @@ data class Game(
     val title: String = "",
     val description: String = "",
     val imageUrl: String = "",
+    val genre: String = "",
     val price: Double = 0.0
 )
