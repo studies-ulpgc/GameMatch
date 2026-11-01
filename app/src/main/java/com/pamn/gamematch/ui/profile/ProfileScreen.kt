@@ -30,8 +30,11 @@ fun ProfileScreen(
 
     val availableGenres = listOf("Acción", "Aventura", "RPG", "Indie", "Estrategia", "Deportes", "Terror")
 
-    // Estado de edicion (Modo lectura por defecto)
     var isEditing by remember { mutableStateOf(false) }
+
+    // Estados de interfaz rápidos (Siempre accesibles fuera del modo edición)
+    var isDarkMode by remember { mutableStateOf(true) }
+    var selectedLanguage by remember { mutableStateOf("Español") }
 
     var username by remember { mutableStateOf("") }
     var selectedGenres by remember { mutableStateOf(setOf<String>()) }
@@ -67,7 +70,6 @@ fun ProfileScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Cabecera con Boton de Lapiz (Modo lectura vs Edicion)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -80,6 +82,46 @@ fun ProfileScreen(
                         contentDescription = "Editar Perfil",
                         tint = if (isEditing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // --- AJUSTES RÁPIDOS DE INTERFAZ (SIEMPRE VISIBLES) ---
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(text = "Ajustes de la App 🎨", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Tema Oscuro")
+                        Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = { isDarkMode = it }
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Idioma")
+                        FilterChip(
+                            selected = true,
+                            onClick = {
+                                selectedLanguage = if (selectedLanguage == "Español") "English" else "Español"
+                            },
+                            label = { Text(selectedLanguage) }
+                        )
+                    }
                 }
             }
 
@@ -106,6 +148,7 @@ fun ProfileScreen(
                     value = username,
                     onValueChange = { username = it },
                     label = { Text("Nombre de Usuario") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -113,8 +156,11 @@ fun ProfileScreen(
 
                 OutlinedTextField(
                     value = birthYear,
-                    onValueChange = { if (it.length <= 4) birthYear = it },
-                    label = { Text("Año de Nacimiento") },
+                    onValueChange = { input ->
+                        if (input.all { it.isDigit() } && input.length <= 4) birthYear = input
+                    },
+                    label = { Text("Año de Nacimiento (1905 - 2018)") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -143,8 +189,14 @@ fun ProfileScreen(
 
                 Button(
                     onClick = {
+                        val yearNum = birthYear.toIntOrNull()
+                        if (yearNum != null && (yearNum < 1905 || yearNum > 2018)) {
+                            Toast.makeText(context, "Año inválido (1905-2018)", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
                         gameRepository.saveUserPreferences(
-                            username = username,
+                            username = username.trim(),
                             genres = selectedGenres.toList(),
                             maxPrice = maxPrice,
                             onlyReleased = onlyReleased,

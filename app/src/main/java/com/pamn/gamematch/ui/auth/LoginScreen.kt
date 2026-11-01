@@ -1,24 +1,27 @@
 package com.pamn.gamematch.ui.auth
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel = viewModel(),
+    viewModel: AuthViewModel = remember { AuthViewModel() },
     onLoginSuccess: () -> Unit,
     onNavigateToSignUp: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var emailTouched by remember { mutableStateOf(false) }
+
+    val isEmailValid = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
     Column(
         modifier = Modifier
@@ -37,7 +40,18 @@ fun LoginScreen(
                 viewModel.clearError()
             },
             label = { Text("Correo electrónico") },
-            modifier = Modifier.fillMaxWidth()
+            singleLine = true,
+            isError = emailTouched && !isEmailValid && email.isNotEmpty(),
+            supportingText = {
+                if (emailTouched && !isEmailValid && email.isNotEmpty()) {
+                    Text("Introduce un correo válido (ej. usuario@gmail.com)")
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused && email.isNotEmpty()) emailTouched = true
+                }
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -49,11 +63,11 @@ fun LoginScreen(
             },
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Mensaje de error si falla Firebase
         viewModel.errorMessage?.let { error ->
             Text(
                 text = error,
