@@ -40,6 +40,7 @@ class GameRepository {
     fun saveUserPreferences(
         username: String,
         genres: List<String>,
+        minPrice: Float, // <-- Nuevo
         maxPrice: Float,
         onlyReleased: Boolean,
         birthYear: String,
@@ -50,6 +51,7 @@ class GameRepository {
         val preferences = hashMapOf(
             "username" to username,
             "preferredGenres" to genres,
+            "minPrice" to minPrice, // <-- Guardamos minPrice en Firestore
             "maxPrice" to maxPrice,
             "onlyReleased" to onlyReleased,
             "birthYear" to birthYear

@@ -12,6 +12,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.pamn.gamematch.data.repository.GameRepository
+import java.util.Calendar
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -21,10 +22,17 @@ fun OnboardingScreen(
     val context = LocalContext.current
     val gameRepository = remember { GameRepository() }
 
+    // Cálculo dinámico de años
+    val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    val minValidYear = currentYear - 120
+    val maxValidYear = currentYear - 8
+
     var username by remember { mutableStateOf("") }
     var birthYear by remember { mutableStateOf("") }
     var selectedGenres by remember { mutableStateOf(setOf<String>()) }
-    var maxPrice by remember { mutableFloatStateOf(70f) }
+
+    // Rango de precio (minimo..maximo)
+    var priceRange by remember { mutableStateOf(0f..70f) }
     var isDarkMode by remember { mutableStateOf(true) }
     var selectedLanguage by remember { mutableStateOf("Español") }
 
@@ -32,7 +40,7 @@ fun OnboardingScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     val yearNum = birthYear.toIntOrNull()
-    val isYearValid = yearNum != null && yearNum in 1905..2026
+    val isYearValid = yearNum != null && yearNum in minValidYear..maxValidYear
     val availableGenres = listOf("Acción", "Aventura", "RPG", "Indie", "Estrategia", "Deportes", "Terror")
 
     Column(
@@ -53,7 +61,7 @@ fun OnboardingScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Ajustes Rápidos de Tema e Idioma
+        // Preferencias de Apariencia
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -97,7 +105,7 @@ fun OnboardingScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Año con validacion al perder foco
+        // Año de Nacimiento Dinamico
         OutlinedTextField(
             value = birthYear,
             onValueChange = { input ->
@@ -110,7 +118,7 @@ fun OnboardingScreen(
             isError = yearTouched && !isYearValid && birthYear.isNotEmpty(),
             supportingText = {
                 if (yearTouched && !isYearValid && birthYear.isNotEmpty()) {
-                    Text("Año inválido (debe ser entre 1905 y 2026)")
+                    Text("Introduce un año válido ($minValidYear - $maxValidYear)")
                 }
             },
             modifier = Modifier
@@ -122,13 +130,16 @@ fun OnboardingScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Filtro de Precio Máximo
-        Text(text = "Precio máximo por juego: ${maxPrice.toInt()} €", style = MaterialTheme.typography.titleMedium)
-        Slider(
-            value = maxPrice,
-            onValueChange = { maxPrice = it },
+        // RangeSlider para Mínimo y Máximo
+        Text(
+            text = "Rango de precio: ${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €",
+            style = MaterialTheme.typography.titleMedium
+        )
+        RangeSlider(
+            value = priceRange,
+            onValueChange = { priceRange = it },
             valueRange = 0f..100f,
-            steps = 10
+            steps = 19
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -163,7 +174,7 @@ fun OnboardingScreen(
                 }
 
                 if (!isYearValid) {
-                    Toast.makeText(context, "Año de nacimiento fuera de rango (1905 - 2026)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Año de nacimiento fuera de rango ($minValidYear - $maxValidYear)", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
@@ -171,7 +182,8 @@ fun OnboardingScreen(
                 gameRepository.saveUserPreferences(
                     username = username.trim(),
                     genres = selectedGenres.toList(),
-                    maxPrice = maxPrice,
+                    minPrice = priceRange.start,
+                    maxPrice = priceRange.endInclusive,
                     onlyReleased = true,
                     birthYear = birthYear
                 ) { success ->

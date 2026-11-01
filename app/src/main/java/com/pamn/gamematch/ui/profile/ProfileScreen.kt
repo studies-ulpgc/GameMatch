@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pamn.gamematch.data.repository.GameRepository
+import java.util.Calendar
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -28,17 +29,20 @@ fun ProfileScreen(
     val gameRepository = remember { GameRepository() }
     val user = auth.currentUser
 
+    val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    val minValidYear = currentYear - 120
+    val maxValidYear = currentYear - 8
+
     val availableGenres = listOf("Acción", "Aventura", "RPG", "Indie", "Estrategia", "Deportes", "Terror")
 
     var isEditing by remember { mutableStateOf(false) }
 
-    // Estados de interfaz rápidos (Siempre accesibles fuera del modo edición)
     var isDarkMode by remember { mutableStateOf(true) }
     var selectedLanguage by remember { mutableStateOf("Español") }
 
     var username by remember { mutableStateOf("") }
     var selectedGenres by remember { mutableStateOf(setOf<String>()) }
-    var maxPrice by remember { mutableFloatStateOf(70f) }
+    var priceRange by remember { mutableStateOf(0f..70f) }
     var onlyReleased by remember { mutableStateOf(true) }
     var birthYear by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
@@ -50,7 +54,11 @@ fun ProfileScreen(
                     username = doc.getString("username") ?: ""
                     val genresList = doc.get("preferredGenres") as? List<String>
                     if (genresList != null) selectedGenres = genresList.toSet()
-                    maxPrice = doc.getDouble("maxPrice")?.toFloat() ?: 70f
+
+                    val minP = doc.getDouble("minPrice")?.toFloat() ?: 0f
+                    val maxP = doc.getDouble("maxPrice")?.toFloat() ?: 70f
+                    priceRange = minP..maxP
+
                     onlyReleased = doc.getBoolean("onlyReleased") ?: true
                     birthYear = doc.getString("birthYear") ?: ""
                     isLoading = false
@@ -87,7 +95,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- AJUSTES RÁPIDOS DE INTERFAZ (SIEMPRE VISIBLES) ---
+            // Ajustes Rápido de Interfaz
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -137,7 +145,7 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(text = "Año de Nacimiento: ${if (birthYear.isBlank()) "Sin especificar" else birthYear}", style = MaterialTheme.typography.bodyMedium)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Precio Máximo: ${maxPrice.toInt()} €", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Rango de Precio: ${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €", style = MaterialTheme.typography.bodyMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(text = "Géneros: ${if (selectedGenres.isEmpty()) "Todos" else selectedGenres.joinToString(", ")}", style = MaterialTheme.typography.bodyMedium)
                     }
@@ -159,7 +167,7 @@ fun ProfileScreen(
                     onValueChange = { input ->
                         if (input.all { it.isDigit() } && input.length <= 4) birthYear = input
                     },
-                    label = { Text("Año de Nacimiento (1905 - 2018)") },
+                    label = { Text("Año de Nacimiento ($minValidYear - $maxValidYear)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -182,23 +190,29 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(text = "Precio máximo: ${maxPrice.toInt()} €", style = MaterialTheme.typography.titleMedium)
-                Slider(value = maxPrice, onValueChange = { maxPrice = it }, valueRange = 0f..100f, steps = 10)
+                Text(text = "Rango de precio: ${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €", style = MaterialTheme.typography.titleMedium)
+                RangeSlider(
+                    value = priceRange,
+                    onValueChange = { priceRange = it },
+                    valueRange = 0f..100f,
+                    steps = 19
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
                     onClick = {
                         val yearNum = birthYear.toIntOrNull()
-                        if (yearNum != null && (yearNum < 1905 || yearNum > 2018)) {
-                            Toast.makeText(context, "Año inválido (1905-2018)", Toast.LENGTH_SHORT).show()
+                        if (yearNum != null && (yearNum < minValidYear || yearNum > maxValidYear)) {
+                            Toast.makeText(context, "Año inválido ($minValidYear - $maxValidYear)", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
 
                         gameRepository.saveUserPreferences(
                             username = username.trim(),
                             genres = selectedGenres.toList(),
-                            maxPrice = maxPrice,
+                            minPrice = priceRange.start,
+                            maxPrice = priceRange.endInclusive,
                             onlyReleased = onlyReleased,
                             birthYear = birthYear
                         ) { success ->
