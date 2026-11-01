@@ -27,4 +27,13 @@ class GameRepository {
                     .addOnFailureListener { onResult(false) }
             }
     }
+
+    fun removeLikedGame(gameId: String, onResult: (Boolean) -> Unit) {
+        val userId = auth.currentUser?.uid ?: return onResult(false)
+
+        db.collection("users").document(userId)
+            .update("likedGames", FieldValue.arrayRemove(gameId))
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
 }

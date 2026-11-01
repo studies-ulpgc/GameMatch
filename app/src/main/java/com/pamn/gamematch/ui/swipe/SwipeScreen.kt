@@ -110,6 +110,13 @@ fun SwipeScreen(
                         val last = history.last()
                         history = history.dropLast(1)
                         gameList = listOf(last) + gameList
+
+                        // Borra la ID de Firebase por si se le dio Like previamente
+                        gameRepository.removeLikedGame(last.id) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Deshecho y eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     } else {
                         Toast.makeText(context, "No hay historial para deshacer", Toast.LENGTH_SHORT).show()
                     }
