@@ -5,23 +5,26 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pamn.gamematch.data.model.Game
+import com.pamn.gamematch.data.repository.GameRepository
 
 @Composable
 fun SwipeScreen(
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToFullDetails: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val gameRepository = remember { GameRepository() }
 
-    // Juegos de prueba simulados
     var gameList by remember {
         mutableStateOf(
             listOf(
@@ -33,6 +36,9 @@ fun SwipeScreen(
         )
     }
 
+    var history by remember { mutableStateOf(listOf<Game>()) }
+    var selectedGameForModal by remember { mutableStateOf<Game?>(null) }
+
     val currentGame = gameList.firstOrNull()
 
     Column(
@@ -42,7 +48,7 @@ fun SwipeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Título superior de la vista "Descubrir"
+        // Cabecera "Descubrir"
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -56,7 +62,7 @@ fun SwipeScreen(
             }
         }
 
-        // Área central de la tarjeta
+        // Area Central (Tarjeta)
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -64,16 +70,18 @@ fun SwipeScreen(
             contentAlignment = Alignment.Center
         ) {
             if (currentGame != null) {
-                // Usamos key(currentGame.id) para forzar a resetear el estado y la animación en cada nuevo juego
                 key(currentGame.id) {
                     GameCard(
                         game = currentGame,
                         onSwipeLeft = {
-                            Toast.makeText(context, "Pasaste de: ${currentGame.title}", Toast.LENGTH_SHORT).show()
+                            history = history + currentGame
                             gameList = gameList.drop(1)
                         },
                         onSwipeRight = {
-                            Toast.makeText(context, "¡Like a: ${currentGame.title}!", Toast.LENGTH_SHORT).show()
+                            gameRepository.saveLikedGame(currentGame.id) { success ->
+                                if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
+                            }
+                            history = history + currentGame
                             gameList = gameList.drop(1)
                         }
                     )
@@ -87,7 +95,7 @@ fun SwipeScreen(
             }
         }
 
-        // Botones inferiores de interaccion (Dislike / Like)
+        // Botones de interacción inferiores: Rebobinar | Dislike | Info | Like
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,10 +103,26 @@ fun SwipeScreen(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Rebobinar / Deshacer (↺)
+            SmallFloatingActionButton(
+                onClick = {
+                    if (history.isNotEmpty()) {
+                        val last = history.last()
+                        history = history.dropLast(1)
+                        gameList = listOf(last) + gameList
+                    } else {
+                        Toast.makeText(context, "No hay historial para deshacer", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = "Deshacer")
+            }
+
+            // Dislike (❌)
             FloatingActionButton(
                 onClick = {
                     if (currentGame != null) {
-                        Toast.makeText(context, "Pasaste de: ${currentGame.title}", Toast.LENGTH_SHORT).show()
+                        history = history + currentGame
                         gameList = gameList.drop(1)
                     }
                 },
@@ -107,10 +131,25 @@ fun SwipeScreen(
                 Icon(Icons.Default.Close, contentDescription = "Dislike", tint = MaterialTheme.colorScheme.error)
             }
 
+            // Pop-Up Más Información (i)
+            SmallFloatingActionButton(
+                onClick = {
+                    if (currentGame != null) {
+                        selectedGameForModal = currentGame
+                    }
+                }
+            ) {
+                Icon(Icons.Default.Info, contentDescription = "Información")
+            }
+
+            // Like (❤️)
             FloatingActionButton(
                 onClick = {
                     if (currentGame != null) {
-                        Toast.makeText(context, "¡Like a: ${currentGame.title}!", Toast.LENGTH_SHORT).show()
+                        gameRepository.saveLikedGame(currentGame.id) { success ->
+                            if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
+                        }
+                        history = history + currentGame
                         gameList = gameList.drop(1)
                     }
                 },
@@ -119,6 +158,17 @@ fun SwipeScreen(
                 Icon(Icons.Default.Favorite, contentDescription = "Like", tint = MaterialTheme.colorScheme.primary)
             }
         }
+    }
+
+    // Modal emergente de tu componente (si el usuario pulsa en 'i')
+    selectedGameForModal?.let { game ->
+        GameDetailModal(
+            game = game,
+            onDismiss = { selectedGameForModal = null },
+            onNavigateToFullDetails = { gameId ->
+                onNavigateToFullDetails(gameId)
+            }
+        )
     }
 }
 
