@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
@@ -36,7 +37,6 @@ fun ProfileScreen(
     val availableGenres = listOf("Acción", "Aventura", "RPG", "Indie", "Estrategia", "Deportes", "Terror")
 
     var isEditing by remember { mutableStateOf(false) }
-
     var isDarkMode by remember { mutableStateOf(true) }
     var selectedLanguage by remember { mutableStateOf("Español") }
 
@@ -46,6 +46,15 @@ fun ProfileScreen(
     var onlyReleased by remember { mutableStateOf(true) }
     var birthYear by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
+
+    // Control de foco y toque para validaciones en edicion
+    var usernameTouched by remember { mutableStateOf(false) }
+    var usernameHasFocused by remember { mutableStateOf(false) }
+    var yearTouched by remember { mutableStateOf(false) }
+    var yearHasFocused by remember { mutableStateOf(false) }
+
+    val yearNum = birthYear.toIntOrNull()
+    val isYearValid = birthYear.isBlank() || (yearNum != null && yearNum in minValidYear..maxValidYear)
 
     LaunchedEffect(user?.uid) {
         user?.uid?.let { uid ->
@@ -155,9 +164,23 @@ fun ProfileScreen(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Nombre de Usuario") },
+                    label = { Text("Nombre de Usuario *") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    isError = usernameTouched && username.isBlank(),
+                    supportingText = {
+                        if (usernameTouched && username.isBlank()) {
+                            Text("El nombre de usuario es obligatorio")
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                usernameHasFocused = true
+                            } else if (usernameHasFocused) {
+                                usernameTouched = true
+                            }
+                        }
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -165,11 +188,30 @@ fun ProfileScreen(
                 OutlinedTextField(
                     value = birthYear,
                     onValueChange = { input ->
-                        if (input.all { it.isDigit() } && input.length <= 4) birthYear = input
+                        if (input.all { it.isDigit() } && input.length <= 4) {
+                            birthYear = input
+                            yearTouched = true // Se marca en el segundo en que escribe
+                        }
                     },
-                    label = { Text("Año de Nacimiento ($minValidYear - $maxValidYear)") },
+                    label = { Text("Año de Nacimiento ($minValidYear - $maxValidYear) *") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    isError = (yearTouched || birthYear.isNotEmpty()) && (birthYear.isBlank() || !isYearValid),
+                    supportingText = {
+                        if ((yearTouched || birthYear.isNotEmpty()) && !isYearValid) {
+                            Text("Año fuera de rango ($minValidYear - $maxValidYear)")
+                        } else if (yearTouched && birthYear.isBlank()) {
+                            Text("El año de nacimiento es obligatorio")
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                yearHasFocused = true
+                            } else if (yearHasFocused) {
+                                yearTouched = true
+                            }
+                        }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -202,8 +244,18 @@ fun ProfileScreen(
 
                 Button(
                     onClick = {
-                        val yearNum = birthYear.toIntOrNull()
-                        if (yearNum != null && (yearNum < minValidYear || yearNum > maxValidYear)) {
+                        usernameTouched = true
+                        yearTouched = true
+
+                        val yNum = birthYear.toIntOrNull()
+                        val validYear = yNum != null && yNum in minValidYear..maxValidYear
+
+                        if (username.isBlank() || birthYear.isBlank()) {
+                            Toast.makeText(context, "Completa los campos obligatorios", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        if (!validYear) {
                             Toast.makeText(context, "Año inválido ($minValidYear - $maxValidYear)", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
@@ -214,7 +266,9 @@ fun ProfileScreen(
                             minPrice = priceRange.start,
                             maxPrice = priceRange.endInclusive,
                             onlyReleased = onlyReleased,
-                            birthYear = birthYear
+                            birthYear = birthYear,
+                            isDarkMode = isDarkMode,
+                            language = selectedLanguage
                         ) { success ->
                             if (success) {
                                 isEditing = false

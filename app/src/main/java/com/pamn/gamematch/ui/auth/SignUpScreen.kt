@@ -22,12 +22,16 @@ fun SignUpScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
-    // Estados para controlar si el usuario tocó cada casilla
+    // Flags para detectar cuando el usuario ABANDONA la casilla
     var emailTouched by remember { mutableStateOf(false) }
     var passwordTouched by remember { mutableStateOf(false) }
     var confirmTouched by remember { mutableStateOf(false) }
 
-    // Evaluaciones de error
+    // Flags auxiliares para rastrear el foco activo
+    var emailHasFocused by remember { mutableStateOf(false) }
+    var passwordHasFocused by remember { mutableStateOf(false) }
+    var confirmHasFocused by remember { mutableStateOf(false) }
+
     val isEmailValid = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
     val isPasswordValid = password.length >= 6
     val isConfirmValid = confirmPassword.isNotEmpty() && confirmPassword == password
@@ -49,7 +53,7 @@ fun SignUpScreen(
         Text(text = "Crear Cuenta", style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Campo Correo con validacion al perder foco
+        // Campo Correo
         OutlinedTextField(
             value = email,
             onValueChange = {
@@ -58,16 +62,24 @@ fun SignUpScreen(
             },
             label = { Text("Correo electrónico") },
             singleLine = true,
-            isError = emailTouched && !isEmailValid && email.isNotEmpty(),
+            isError = emailTouched && (email.isBlank() || !isEmailValid),
             supportingText = {
-                if (emailTouched && !isEmailValid && email.isNotEmpty()) {
-                    Text("Formato de correo no válido (ej. usuario@gmail.com)")
+                if (emailTouched) {
+                    when {
+                        email.isBlank() -> Text("El correo electrónico es obligatorio")
+                        !isEmailValid -> Text("Correo inválido (ej. usuario@gmail.com)")
+                    }
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { focusState ->
-                    if (!focusState.isFocused && email.isNotEmpty()) emailTouched = true
+                    if (focusState.isFocused) {
+                        emailHasFocused = true
+                    } else if (emailHasFocused) {
+                        // Solo marca touched cuando sale tras haber entrado
+                        emailTouched = true
+                    }
                 }
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -82,16 +94,23 @@ fun SignUpScreen(
             label = { Text("Contraseña (min. 6 caracteres)") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            isError = passwordTouched && !isPasswordValid && password.isNotEmpty(),
+            isError = passwordTouched && (password.isBlank() || !isPasswordValid),
             supportingText = {
-                if (passwordTouched && !isPasswordValid && password.isNotEmpty()) {
-                    Text("La contraseña debe tener al menos 6 caracteres")
+                if (passwordTouched) {
+                    when {
+                        password.isBlank() -> Text("La contraseña es obligatoria")
+                        !isPasswordValid -> Text("Debe tener al menos 6 caracteres")
+                    }
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { focusState ->
-                    if (!focusState.isFocused && password.isNotEmpty()) passwordTouched = true
+                    if (focusState.isFocused) {
+                        passwordHasFocused = true
+                    } else if (passwordHasFocused) {
+                        passwordTouched = true
+                    }
                 }
         )
 
@@ -126,16 +145,23 @@ fun SignUpScreen(
             label = { Text("Confirmar contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            isError = confirmTouched && !isConfirmValid && confirmPassword.isNotEmpty(),
+            isError = confirmTouched && (confirmPassword.isBlank() || !isConfirmValid),
             supportingText = {
-                if (confirmTouched && !isConfirmValid && confirmPassword.isNotEmpty()) {
-                    Text("Las contraseñas no coinciden")
+                if (confirmTouched) {
+                    when {
+                        confirmPassword.isBlank() -> Text("Confirma tu contraseña")
+                        !isConfirmValid -> Text("Las contraseñas no coinciden")
+                    }
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { focusState ->
-                    if (!focusState.isFocused && confirmPassword.isNotEmpty()) confirmTouched = true
+                    if (focusState.isFocused) {
+                        confirmHasFocused = true
+                    } else if (confirmHasFocused) {
+                        confirmTouched = true
+                    }
                 }
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -157,7 +183,9 @@ fun SignUpScreen(
                     emailTouched = true
                     passwordTouched = true
                     confirmTouched = true
-                    viewModel.signUp(email, password, confirmPassword, onSignUpSuccess)
+                    if (isEmailValid && isPasswordValid && isConfirmValid) {
+                        viewModel.signUp(email, password, confirmPassword, onSignUpSuccess)
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

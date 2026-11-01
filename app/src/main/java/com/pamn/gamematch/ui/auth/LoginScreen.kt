@@ -19,7 +19,12 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
     var emailTouched by remember { mutableStateOf(false) }
+    var emailHasFocused by remember { mutableStateOf(false) }
+
+    var passwordTouched by remember { mutableStateOf(false) }
+    var passwordHasFocused by remember { mutableStateOf(false) }
 
     val isEmailValid = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
@@ -33,6 +38,7 @@ fun LoginScreen(
         Text(text = "GameMatch", style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Campo Correo con error al abandonar
         OutlinedTextField(
             value = email,
             onValueChange = {
@@ -41,20 +47,28 @@ fun LoginScreen(
             },
             label = { Text("Correo electrónico") },
             singleLine = true,
-            isError = emailTouched && !isEmailValid && email.isNotEmpty(),
+            isError = emailTouched && (email.isBlank() || !isEmailValid),
             supportingText = {
-                if (emailTouched && !isEmailValid && email.isNotEmpty()) {
-                    Text("Introduce un correo válido (ej. usuario@gmail.com)")
+                if (emailTouched) {
+                    when {
+                        email.isBlank() -> Text("El correo electrónico es obligatorio")
+                        !isEmailValid -> Text("Introduce un correo válido (ej. usuario@gmail.com)")
+                    }
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { focusState ->
-                    if (!focusState.isFocused && email.isNotEmpty()) emailTouched = true
+                    if (focusState.isFocused) {
+                        emailHasFocused = true
+                    } else if (emailHasFocused) {
+                        emailTouched = true
+                    }
                 }
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Campo Contraseña con error al abandonar
         OutlinedTextField(
             value = password,
             onValueChange = {
@@ -64,7 +78,21 @@ fun LoginScreen(
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            isError = passwordTouched && password.isBlank(),
+            supportingText = {
+                if (passwordTouched && password.isBlank()) {
+                    Text("La contraseña es obligatoria")
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        passwordHasFocused = true
+                    } else if (passwordHasFocused) {
+                        passwordTouched = true
+                    }
+                }
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -81,7 +109,13 @@ fun LoginScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.login(email, password, onLoginSuccess) },
+                onClick = {
+                    emailTouched = true
+                    passwordTouched = true
+                    if (email.isNotBlank() && isEmailValid && password.isNotBlank()) {
+                        viewModel.login(email, password, onLoginSuccess)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Iniciar Sesión")
