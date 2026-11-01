@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pamn.gamematch.ui.MainContainerScreen
 import com.pamn.gamematch.ui.auth.LoginScreen
+import com.pamn.gamematch.ui.auth.OnboardingScreen
 import com.pamn.gamematch.ui.auth.SignUpScreen
 import com.pamn.gamematch.ui.profile.ProfileScreen
 import com.pamn.gamematch.ui.swipe.SwipeScreen
@@ -37,8 +38,11 @@ class MainActivity : ComponentActivity() {
                     onNavigateToSignUp = { currentScreen = "signup" }
                 )
                 "signup" -> SignUpScreen(
-                    onSignUpSuccess = { currentScreen = "main" },
+                    onSignUpSuccess = { currentScreen = "onboarding" }, // Redirige al Onboarding
                     onNavigateToLogin = { currentScreen = "login" }
+                )
+                "onboarding" -> OnboardingScreen(
+                    onOnboardingComplete = { currentScreen = "main" }
                 )
                 "main" -> MainContainerScreen(
                     onLogout = { currentScreen = "login" }
