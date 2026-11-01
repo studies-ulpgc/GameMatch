@@ -36,4 +36,28 @@ class GameRepository {
             .addOnSuccessListener { onResult(true) }
             .addOnFailureListener { onResult(false) }
     }
+
+    fun saveUserPreferences(
+        username: String,
+        genres: List<String>,
+        maxPrice: Float,
+        onlyReleased: Boolean,
+        birthYear: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        val userId = auth.currentUser?.uid ?: return onResult(false)
+
+        val preferences = hashMapOf(
+            "username" to username,
+            "preferredGenres" to genres,
+            "maxPrice" to maxPrice,
+            "onlyReleased" to onlyReleased,
+            "birthYear" to birthYear
+        )
+
+        db.collection("users").document(userId)
+            .set(preferences, com.google.firebase.firestore.SetOptions.merge())
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
 }
