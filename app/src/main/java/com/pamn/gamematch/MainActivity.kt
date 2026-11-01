@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.pamn.gamematch.ui.MainContainerScreen
 import com.pamn.gamematch.ui.auth.LoginScreen
 import com.pamn.gamematch.ui.auth.SignUpScreen
 import com.pamn.gamematch.ui.profile.ProfileScreen
@@ -28,26 +29,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            GameMatchTheme {
-                var currentScreen by remember { mutableStateOf("login") }
+            var currentScreen by remember { mutableStateOf("login") }
 
-                when (currentScreen) {
-                    "login" -> LoginScreen(
-                        onLoginSuccess = { currentScreen = "swipe" },
-                        onNavigateToSignUp = { currentScreen = "signup" }
-                    )
-                    "signup" -> SignUpScreen(
-                        onSignUpSuccess = { currentScreen = "swipe" },
-                        onNavigateToLogin = { currentScreen = "login" }
-                    )
-                    "swipe" -> SwipeScreen(
-                        onNavigateToProfile = { currentScreen = "profile" }
-                    )
-                    "profile" -> ProfileScreen(
-                        onNavigateBack = { currentScreen = "swipe" },
-                        onLogout = { currentScreen = "login" }
-                    )
-                }
+            when (currentScreen) {
+                "login" -> LoginScreen(
+                    onLoginSuccess = { currentScreen = "main" },
+                    onNavigateToSignUp = { currentScreen = "signup" }
+                )
+                "signup" -> SignUpScreen(
+                    onSignUpSuccess = { currentScreen = "main" },
+                    onNavigateToLogin = { currentScreen = "login" }
+                )
+                "main" -> MainContainerScreen(
+                    onLogout = { currentScreen = "login" }
+                )
             }
         }
     }
