@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pamn.gamematch.ui.auth.LoginScreen
 import com.pamn.gamematch.ui.auth.SignUpScreen
+import com.pamn.gamematch.ui.profile.ProfileScreen
 import com.pamn.gamematch.ui.swipe.SwipeScreen
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 
@@ -40,7 +41,11 @@ class MainActivity : ComponentActivity() {
                         onNavigateToLogin = { currentScreen = "login" }
                     )
                     "swipe" -> SwipeScreen(
-                        onNavigateToProfile = { /* Proximamente: Perfil */ }
+                        onNavigateToProfile = { currentScreen = "profile" }
+                    )
+                    "profile" -> ProfileScreen(
+                        onNavigateBack = { currentScreen = "swipe" },
+                        onLogout = { currentScreen = "login" }
                     )
                 }
             }
