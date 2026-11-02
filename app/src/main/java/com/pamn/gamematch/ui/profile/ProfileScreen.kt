@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -54,7 +55,7 @@ fun ProfileScreen(
     var birthYear by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Control de foco para validaciones
+    // Control de foco para validaciones del perfil
     var usernameTouched by remember { mutableStateOf(false) }
     var usernameHasFocused by remember { mutableStateOf(false) }
     var yearTouched by remember { mutableStateOf(false) }
@@ -65,7 +66,15 @@ fun ProfileScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var newPasswordInput by remember { mutableStateOf("") }
     var confirmPasswordInput by remember { mutableStateOf("") }
+
+    // Flags de interacción y visibilidad para el diálogo de contraseña
+    var newPasswordTouched by remember { mutableStateOf(false) }
+    var newPasswordHasFocused by remember { mutableStateOf(false) }
+    var confirmPasswordTouched by remember { mutableStateOf(false) }
+    var confirmPasswordHasFocused by remember { mutableStateOf(false) }
+
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
     val isYearValid = remember(birthYear) {
         if (birthYear.isEmpty()) true
@@ -82,7 +91,6 @@ fun ProfileScreen(
         }
     }
 
-    // Función auxiliar para actualizar preferencias rápidas (Tema e Idioma)
     fun updateQuickSettings(darkMode: Boolean, language: String) {
         gameRepository.saveUserPreferences(
             username = username.trim(),
@@ -146,7 +154,6 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Ajustes Rápidos de Interfaz (Guarda automáticamente en Firestore)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -368,25 +375,33 @@ fun ProfileScreen(
         }
     }
 
-    // --- DIÁLOGO DE CAMBIO DE CONTRASEÑA (CON ICONO OJO Y CONFIRMACIÓN) ---
+    // --- DIÁLOGO DE CAMBIO DE CONTRASEÑA IGUAL A SIGN UP ---
     if (showPasswordDialog) {
         val authViewModel = remember { AuthViewModel() }
+        val isNewPasswordValid = newPasswordInput.length >= 6
+        val isConfirmPasswordValid = confirmPasswordInput.isNotEmpty() && confirmPasswordInput == newPasswordInput
+
         val newPasswordStrength = authViewModel.getPasswordStrength(newPasswordInput)
         val strengthColor = when {
             newPasswordStrength < 0.35f -> MaterialTheme.colorScheme.error
-            newPasswordStrength < 0.7f -> androidx.compose.ui.graphics.Color(0xFFFFA000)
-            else -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+            newPasswordStrength < 0.7f -> Color(0xFFFFA000)
+            else -> Color(0xFF4CAF50)
         }
 
         AlertDialog(
-            onDismissRequest = { showPasswordDialog = false },
+            onDismissRequest = {
+                showPasswordDialog = false
+                newPasswordTouched = false
+                confirmPasswordTouched = false
+            },
             title = { Text("Cambiar Contraseña") },
             text = {
                 Column {
+                    // Campo Nueva Contraseña
                     OutlinedTextField(
                         value = newPasswordInput,
                         onValueChange = { newPasswordInput = it },
-                        label = { Text("Nueva contraseña (min. 6)") },
+                        label = { Text("Nueva contraseña (min. 6 caracteres)") },
                         singleLine = true,
                         visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -397,7 +412,24 @@ fun ProfileScreen(
                                 )
                             }
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        isError = newPasswordTouched && (newPasswordInput.isBlank() || !isNewPasswordValid),
+                        supportingText = {
+                            if (newPasswordTouched) {
+                                when {
+                                    newPasswordInput.isBlank() -> Text("La contraseña es obligatoria")
+                                    !isNewPasswordValid -> Text("Debe tener al menos 6 caracteres")
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    newPasswordHasFocused = true
+                                } else if (newPasswordHasFocused) {
+                                    newPasswordTouched = true
+                                }
+                            }
                     )
 
                     if (newPasswordInput.isNotEmpty()) {
@@ -411,41 +443,69 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Campo Confirmar Nueva Contraseña
                     OutlinedTextField(
                         value = confirmPasswordInput,
                         onValueChange = { confirmPasswordInput = it },
                         label = { Text("Confirmar contraseña") },
                         singleLine = true,
-                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
+                        visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = "Mostrar/ocultar contraseña"
+                                )
+                            }
+                        },
+                        isError = confirmPasswordTouched && (confirmPasswordInput.isBlank() || !isConfirmPasswordValid),
+                        supportingText = {
+                            if (confirmPasswordTouched) {
+                                when {
+                                    confirmPasswordInput.isBlank() -> Text("Confirma tu contraseña")
+                                    !isConfirmPasswordValid -> Text("Las contraseñas no coinciden")
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    confirmPasswordHasFocused = true
+                                } else if (confirmPasswordHasFocused) {
+                                    confirmPasswordTouched = true
+                                }
+                            }
                     )
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    if (newPasswordInput.length < 6) {
-                        Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (newPasswordInput != confirmPasswordInput) {
-                        Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
+                    newPasswordTouched = true
+                    confirmPasswordTouched = true
 
-                    authRepository.updatePassword(newPasswordInput) { success, err ->
-                        if (success) {
-                            Toast.makeText(context, "Contraseña actualizada correctamente", Toast.LENGTH_SHORT).show()
-                            showPasswordDialog = false
-                            newPasswordInput = ""
-                            confirmPasswordInput = ""
-                        } else {
-                            Toast.makeText(context, err ?: "Error al actualizar contraseña", Toast.LENGTH_SHORT).show()
+                    if (isNewPasswordValid && isConfirmPasswordValid) {
+                        authRepository.updatePassword(newPasswordInput) { success, err ->
+                            if (success) {
+                                Toast.makeText(context, "Contraseña actualizada correctamente", Toast.LENGTH_SHORT).show()
+                                showPasswordDialog = false
+                                newPasswordInput = ""
+                                confirmPasswordInput = ""
+                                newPasswordTouched = false
+                                confirmPasswordTouched = false
+                            } else {
+                                Toast.makeText(context, err ?: "Error al actualizar contraseña", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }) { Text("Guardar") }
             },
             dismissButton = {
-                TextButton(onClick = { showPasswordDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = {
+                    showPasswordDialog = false
+                    newPasswordTouched = false
+                    confirmPasswordTouched = false
+                }) { Text("Cancelar") }
             }
         )
     }
