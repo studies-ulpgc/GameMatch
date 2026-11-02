@@ -30,6 +30,7 @@ import com.pamn.gamematch.ui.components.AvatarSelectionDialog
 import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 import java.util.Calendar
+import com.pamn.gamematch.data.model.User
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -103,9 +104,11 @@ fun ProfileScreen(
         }
 
         fun updateQuickSettings(darkMode: Boolean, language: String) {
-            gameRepository.saveUserPreferences(
+            val userModel = User(
+                uid = user?.uid ?: "",
+                email = user?.email ?: "",
                 username = username.trim(),
-                genres = selectedGenres.toList(),
+                preferredGenres = selectedGenres.toList(),
                 minPrice = priceRange.start,
                 maxPrice = priceRange.endInclusive,
                 onlyReleased = onlyReleased,
@@ -113,7 +116,9 @@ fun ProfileScreen(
                 isDarkMode = darkMode,
                 language = language,
                 profilePictureUrl = profilePictureUrl
-            ) { /* Guardado silencioso */ }
+            )
+
+            gameRepository.saveUserPreferences(userModel = userModel) { /* Guardado silencioso */ }
         }
 
         LaunchedEffect(user?.uid) {
@@ -426,9 +431,11 @@ fun ProfileScreen(
                                     return@Button
                                 }
 
-                                gameRepository.saveUserPreferences(
+                                val updatedUser = User(
+                                    uid = user?.uid ?: "",
+                                    email = user?.email ?: "",
                                     username = username.trim(),
-                                    genres = selectedGenres.toList(),
+                                    preferredGenres = selectedGenres.toList(),
                                     minPrice = priceRange.start,
                                     maxPrice = priceRange.endInclusive,
                                     onlyReleased = onlyReleased,
@@ -436,7 +443,9 @@ fun ProfileScreen(
                                     isDarkMode = isDarkModeGlobal,
                                     language = selectedLanguage,
                                     profilePictureUrl = profilePictureUrl
-                                ) { success ->
+                                )
+
+                                gameRepository.saveUserPreferences(userModel = updatedUser) { success ->
                                     if (success) {
                                         isEditing = false
                                         Toast.makeText(context, "Perfil actualizado", Toast.LENGTH_SHORT).show()

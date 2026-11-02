@@ -21,6 +21,7 @@ import com.pamn.gamematch.ui.components.AvatarSelectionDialog
 import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 import java.util.Calendar
+import com.pamn.gamematch.data.model.User
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -306,10 +307,10 @@ fun OnboardingScreen(
                             return@Button
                         }
 
-                        isLoading = true
-                        gameRepository.saveUserPreferences(
+                        // LLAMADA NUEVA REFACTORIZADA
+                        val updatedUser = User(
                             username = username.trim(),
-                            genres = selectedGenres.toList(),
+                            preferredGenres = selectedGenres.toList(),
                             minPrice = priceRange.start,
                             maxPrice = priceRange.endInclusive,
                             onlyReleased = true,
@@ -317,7 +318,9 @@ fun OnboardingScreen(
                             isDarkMode = isDarkMode,
                             language = selectedLanguage,
                             profilePictureUrl = profilePictureUrl
-                        ) { success ->
+                        )
+
+                        gameRepository.saveUserPreferences(userModel = updatedUser) { success ->
                             isLoading = false
                             if (success) {
                                 onOnboardingComplete()

@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.pamn.gamematch.data.model.User
 
 class GameRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -34,34 +35,13 @@ class GameRepository {
     }
 
     fun saveUserPreferences(
-        username: String,
-        genres: List<String>,
-        minPrice: Float,
-        maxPrice: Float,
-        onlyReleased: Boolean,
-        birthYear: String,
-        isDarkMode: Boolean,
-        language: String,
-        profilePictureUrl: String = "https://api.dicebear.com/7.x/bottts/png?seed=default",
+        userModel: User,
         onResult: (Boolean) -> Unit
     ) {
-        val user = auth.currentUser ?: return onResult(false)
+        val currentUser = auth.currentUser ?: return onResult(false)
 
-        val preferences = hashMapOf(
-            "email" to (user.email ?: ""),
-            "username" to username,
-            "preferredGenres" to genres,
-            "minPrice" to minPrice,
-            "maxPrice" to maxPrice,
-            "onlyReleased" to onlyReleased,
-            "birthYear" to birthYear,
-            "isDarkMode" to isDarkMode,
-            "language" to language,
-            "profilePictureUrl" to profilePictureUrl
-        )
-
-        db.collection("users").document(user.uid)
-            .set(preferences, SetOptions.merge())
+        db.collection("users").document(currentUser.uid)
+            .set(userModel, SetOptions.merge())
             .addOnSuccessListener { onResult(true) }
             .addOnFailureListener { onResult(false) }
     }
