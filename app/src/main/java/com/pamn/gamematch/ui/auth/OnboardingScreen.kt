@@ -38,6 +38,7 @@ fun OnboardingScreen(
         var username by remember { mutableStateOf("") }
         var birthYear by remember { mutableStateOf("") }
         var selectedGenres by remember { mutableStateOf(setOf<String>()) }
+        var isUsernameFocused by remember { mutableStateOf(false) }
 
         var priceRange by remember { mutableStateOf(0f..70f) }
         var selectedLanguage by remember { mutableStateOf("Español") }
@@ -163,7 +164,11 @@ fun OnboardingScreen(
                     onValueChange = { username = it },
                     label = { Text("Nombre de usuario *") },
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Person, contentDescription = null)
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     },
                     singleLine = true,
                     isError = usernameTouched && username.isBlank(),
@@ -175,6 +180,7 @@ fun OnboardingScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { focusState ->
+                            isUsernameFocused = focusState.isFocused // Captura el foco
                             if (focusState.isFocused) {
                                 usernameHasFocused = true
                             } else if (usernameHasFocused) {
