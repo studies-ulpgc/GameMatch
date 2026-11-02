@@ -26,6 +26,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.pamn.gamematch.data.repository.AuthRepository
 import com.pamn.gamematch.data.repository.GameRepository
 import com.pamn.gamematch.ui.auth.AuthViewModel
+import com.pamn.gamematch.ui.components.AvatarSelectionDialog
+import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 import java.util.Calendar
 
@@ -82,6 +84,9 @@ fun ProfileScreen(
         var isPasswordVisible by remember { mutableStateOf(false) }
         var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
+        var profilePictureUrl by remember { mutableStateOf("https://api.dicebear.com/7.x/bottts/png?seed=default") }
+        var showAvatarSelector by remember { mutableStateOf(false) }
+
         val isYearValid = remember(birthYear) {
             if (birthYear.isEmpty()) true
             else {
@@ -106,7 +111,8 @@ fun ProfileScreen(
                 onlyReleased = onlyReleased,
                 birthYear = birthYear,
                 isDarkMode = darkMode,
-                language = language
+                language = language,
+                profilePictureUrl = profilePictureUrl
             ) { /* Guardado silencioso */ }
         }
 
@@ -130,6 +136,8 @@ fun ProfileScreen(
                         }
                         selectedLanguage = doc.getString("language") ?: "Español"
                         isLoading = false
+
+                        profilePictureUrl = doc.getString("profilePictureUrl") ?: "https://api.dicebear.com/7.x/bottts/png?seed=default"
                     }
                     .addOnFailureListener { isLoading = false }
             }
@@ -171,6 +179,17 @@ fun ProfileScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ProfileAvatar(
+                            imageUrl = profilePictureUrl,
+                            isEditing = isEditing, // Muestra el icono de cámara al estar en modo edición
+                            onClick = { showAvatarSelector = true } // Se puede hacer clic para editar
+                        )
+                    }
 
                     // Tarjeta de Ajustes Generales
                     Card(
@@ -415,7 +434,8 @@ fun ProfileScreen(
                                     onlyReleased = onlyReleased,
                                     birthYear = birthYear,
                                     isDarkMode = isDarkModeGlobal,
-                                    language = selectedLanguage
+                                    language = selectedLanguage,
+                                    profilePictureUrl = profilePictureUrl
                                 ) { success ->
                                     if (success) {
                                         isEditing = false
@@ -642,6 +662,13 @@ fun ProfileScreen(
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
                 }
+            )
+        }
+
+        if (showAvatarSelector) {
+            AvatarSelectionDialog(
+                onDismiss = { showAvatarSelector = false },
+                onAvatarSelected = { url -> profilePictureUrl = url }
             )
         }
     }

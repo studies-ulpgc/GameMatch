@@ -42,20 +42,22 @@ class GameRepository {
         birthYear: String,
         isDarkMode: Boolean,
         language: String,
+        profilePictureUrl: String = "https://api.dicebear.com/7.x/bottts/png?seed=default",
         onResult: (Boolean) -> Unit
     ) {
         val user = auth.currentUser ?: return onResult(false)
 
         val preferences = hashMapOf(
-            "email" to (user.email ?: ""), // Guardamos el email dentro del documento
+            "email" to (user.email ?: ""),
             "username" to username,
             "preferredGenres" to genres,
             "minPrice" to minPrice,
             "maxPrice" to maxPrice,
             "onlyReleased" to onlyReleased,
             "birthYear" to birthYear,
-            "isDarkMode" to isDarkMode, // Guardamos tema
-            "language" to language     // Guardamos idioma
+            "isDarkMode" to isDarkMode,
+            "language" to language,
+            "profilePictureUrl" to profilePictureUrl
         )
 
         db.collection("users").document(user.uid)

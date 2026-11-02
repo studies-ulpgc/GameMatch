@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.pamn.gamematch.data.repository.GameRepository
+import com.pamn.gamematch.ui.components.AvatarSelectionDialog
+import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 import java.util.Calendar
 
@@ -49,6 +51,9 @@ fun OnboardingScreen(
         var yearTouched by remember { mutableStateOf(false) }
         var yearHasFocused by remember { mutableStateOf(false) }
         var isLoading by remember { mutableStateOf(false) }
+
+        var profilePictureUrl by remember { mutableStateOf("https://api.dicebear.com/7.x/bottts/png?seed=default") }
+        var showAvatarSelector by remember { mutableStateOf(false) }
 
         val isYearValid = remember(birthYear) {
             if (birthYear.isEmpty()) true
@@ -94,6 +99,14 @@ fun OnboardingScreen(
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                ProfileAvatar(
+                    imageUrl = profilePictureUrl,
+                    isEditing = true,
+                    onClick = { showAvatarSelector = true }
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Configuración de Apariencia (Tarjeta limpia sin contorno)
                 Card(
@@ -302,7 +315,8 @@ fun OnboardingScreen(
                             onlyReleased = true,
                             birthYear = birthYear,
                             isDarkMode = isDarkMode,
-                            language = selectedLanguage
+                            language = selectedLanguage,
+                            profilePictureUrl = profilePictureUrl
                         ) { success ->
                             isLoading = false
                             if (success) {
@@ -329,6 +343,12 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+        if (showAvatarSelector) {
+            AvatarSelectionDialog(
+                onDismiss = { showAvatarSelector = false },
+                onAvatarSelected = { url -> profilePictureUrl = url }
+            )
         }
     }
 }
