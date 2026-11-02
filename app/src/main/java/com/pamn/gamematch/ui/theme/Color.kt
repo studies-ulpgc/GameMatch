@@ -17,3 +17,6 @@ val SteamLightSurface = Color(0xFFD1D5DB)   // Gris neutro
 val LikeColor = Color(0xFFFF2A5F)            // Corazón Neón / Like
 val DislikeColor = Color(0xFF2C2C35)         // Cruz Gris Carbón
 val UnreleasedBadgeColor = Color(0xFFFF9800)  // Naranja para "Próximamente"
+
+// --- COLOR DE ERROR EN MODO OSCURO ---
+val SoftErrorColor = Color(0xFFFF6B6B)       // Rojo coral suave y muy legible sobre oscuro
