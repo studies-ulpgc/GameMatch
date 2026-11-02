@@ -30,7 +30,9 @@ class MainActivity : ComponentActivity() {
                         onNavigateToLogin = { currentScreen = "login" }
                     )
                     "onboarding" -> OnboardingScreen(
-                        onOnboardingComplete = { currentScreen = "main" }
+                        onOnboardingComplete = { currentScreen = "main" },
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = { isDarkMode = it }
                     )
                     "main" -> MainContainerScreen(
                         onLogout = { currentScreen = "login" },
