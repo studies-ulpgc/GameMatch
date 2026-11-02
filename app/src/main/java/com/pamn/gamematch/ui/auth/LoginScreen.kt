@@ -2,12 +2,16 @@ package com.pamn.gamematch.ui.auth
 
 import android.util.Patterns
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -25,6 +29,7 @@ fun LoginScreen(
 
     var passwordTouched by remember { mutableStateOf(false) }
     var passwordHasFocused by remember { mutableStateOf(false) }
+    var isPasswordVisible by remember { mutableStateOf(false) }
 
     val isEmailValid = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
@@ -76,8 +81,16 @@ fun LoginScreen(
                 viewModel.clearError()
             },
             label = { Text("Contraseña") },
-            visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    Icon(
+                        imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = "Mostrar/ocultar contraseña"
+                    )
+                }
+            },
             isError = passwordTouched && password.isBlank(),
             supportingText = {
                 if (passwordTouched && password.isBlank()) {

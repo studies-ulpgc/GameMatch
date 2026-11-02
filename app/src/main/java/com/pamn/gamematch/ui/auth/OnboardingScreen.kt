@@ -41,8 +41,20 @@ fun OnboardingScreen(
     var yearHasFocused by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    val yearNum = birthYear.toIntOrNull()
-    val isYearValid = birthYear.isBlank() || (yearNum != null && yearNum in minValidYear..maxValidYear)
+    val isYearValid = remember(birthYear) {
+        if (birthYear.isEmpty()) true
+        else {
+            val yearNum = birthYear.toIntOrNull()
+            if (yearNum == null) false
+            else if (birthYear.length < 4) {
+                val minPrefix = minValidYear.toString().take(birthYear.length).toInt()
+                val maxPrefix = maxValidYear.toString().take(birthYear.length).toInt()
+                yearNum in minPrefix..maxPrefix
+            } else {
+                yearNum in minValidYear..maxValidYear
+            }
+        }
+    }
     val availableGenres = listOf("Acción", "Aventura", "RPG", "Indie", "Estrategia", "Deportes", "Terror")
 
     Column(
@@ -131,7 +143,7 @@ fun OnboardingScreen(
             },
             label = { Text("Año de Nacimiento (Ej. 2002) *") },
             singleLine = true,
-            isError = (yearTouched || birthYear.isNotEmpty()) && (birthYear.isBlank() || !isYearValid),
+            isError = !isYearValid || (yearTouched && birthYear.isBlank()),
             supportingText = {
                 if ((yearTouched || birthYear.isNotEmpty()) && !isYearValid) {
                     Text("Año fuera de rango ($minValidYear - $maxValidYear)")

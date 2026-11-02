@@ -6,16 +6,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.pamn.gamematch.data.repository.AuthRepository
 import com.pamn.gamematch.data.repository.GameRepository
+import com.pamn.gamematch.ui.auth.AuthViewModel
 import java.util.Calendar
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -28,6 +34,7 @@ fun ProfileScreen(
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val gameRepository = remember { GameRepository() }
+    val authRepository = remember { AuthRepository() }
     val user = auth.currentUser
 
     val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
@@ -47,14 +54,47 @@ fun ProfileScreen(
     var birthYear by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Control de foco y toque para validaciones en edicion
+    // Control de foco para validaciones
     var usernameTouched by remember { mutableStateOf(false) }
     var usernameHasFocused by remember { mutableStateOf(false) }
     var yearTouched by remember { mutableStateOf(false) }
     var yearHasFocused by remember { mutableStateOf(false) }
 
-    val yearNum = birthYear.toIntOrNull()
-    val isYearValid = birthYear.isBlank() || (yearNum != null && yearNum in minValidYear..maxValidYear)
+    // Estados para los diálogos de cuenta
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var newPasswordInput by remember { mutableStateOf("") }
+    var confirmPasswordInput by remember { mutableStateOf("") }
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
+    val isYearValid = remember(birthYear) {
+        if (birthYear.isEmpty()) true
+        else {
+            val yearNum = birthYear.toIntOrNull()
+            if (yearNum == null) false
+            else if (birthYear.length < 4) {
+                val minPrefix = minValidYear.toString().take(birthYear.length).toInt()
+                val maxPrefix = maxValidYear.toString().take(birthYear.length).toInt()
+                yearNum in minPrefix..maxPrefix
+            } else {
+                yearNum in minValidYear..maxValidYear
+            }
+        }
+    }
+
+    // Función auxiliar para actualizar preferencias rápidas (Tema e Idioma)
+    fun updateQuickSettings(darkMode: Boolean, language: String) {
+        gameRepository.saveUserPreferences(
+            username = username.trim(),
+            genres = selectedGenres.toList(),
+            minPrice = priceRange.start,
+            maxPrice = priceRange.endInclusive,
+            onlyReleased = onlyReleased,
+            birthYear = birthYear,
+            isDarkMode = darkMode,
+            language = language
+        ) { /* Actualización silenciosa en Firestore */ }
+    }
 
     LaunchedEffect(user?.uid) {
         user?.uid?.let { uid ->
@@ -70,6 +110,8 @@ fun ProfileScreen(
 
                     onlyReleased = doc.getBoolean("onlyReleased") ?: true
                     birthYear = doc.getString("birthYear") ?: ""
+                    isDarkMode = doc.getBoolean("isDarkMode") ?: true
+                    selectedLanguage = doc.getString("language") ?: "Español"
                     isLoading = false
                 }
                 .addOnFailureListener { isLoading = false }
@@ -104,7 +146,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Ajustes Rápido de Interfaz
+            // Ajustes Rápidos de Interfaz (Guarda automáticamente en Firestore)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -121,7 +163,10 @@ fun ProfileScreen(
                         Text("Tema Oscuro")
                         Switch(
                             checked = isDarkMode,
-                            onCheckedChange = { isDarkMode = it }
+                            onCheckedChange = {
+                                isDarkMode = it
+                                updateQuickSettings(isDarkMode, selectedLanguage)
+                            }
                         )
                     }
 
@@ -135,6 +180,7 @@ fun ProfileScreen(
                             selected = true,
                             onClick = {
                                 selectedLanguage = if (selectedLanguage == "Español") "English" else "Español"
+                                updateQuickSettings(isDarkMode, selectedLanguage)
                             },
                             label = { Text(selectedLanguage) }
                         )
@@ -151,6 +197,8 @@ fun ProfileScreen(
                         Text(text = "Usuario: ${if (username.isBlank()) "Sin especificar" else username}", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(text = "Correo: ${user?.email}", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = "Contraseña: ••••••••••••", style = MaterialTheme.typography.bodyMedium)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(text = "Año de Nacimiento: ${if (birthYear.isBlank()) "Sin especificar" else birthYear}", style = MaterialTheme.typography.bodyMedium)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -190,12 +238,12 @@ fun ProfileScreen(
                     onValueChange = { input ->
                         if (input.all { it.isDigit() } && input.length <= 4) {
                             birthYear = input
-                            yearTouched = true // Se marca en el segundo en que escribe
+                            yearTouched = true
                         }
                     },
                     label = { Text("Año de Nacimiento ($minValidYear - $maxValidYear) *") },
                     singleLine = true,
-                    isError = (yearTouched || birthYear.isNotEmpty()) && (birthYear.isBlank() || !isYearValid),
+                    isError = !isYearValid || (yearTouched && birthYear.isBlank()),
                     supportingText = {
                         if ((yearTouched || birthYear.isNotEmpty()) && !isYearValid) {
                             Text("Año fuera de rango ($minValidYear - $maxValidYear)")
@@ -280,6 +328,29 @@ fun ProfileScreen(
                 ) {
                     Text("Guardar Cambios")
                 }
+
+                // --- ZONA DE ACCIONES DE CUENTA ---
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(text = "Opciones de Cuenta ⚠️", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    OutlinedButton(onClick = { showPasswordDialog = true }) {
+                        Text("Cambiar Contraseña")
+                    }
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Eliminar Cuenta")
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -295,5 +366,114 @@ fun ProfileScreen(
                 Text("Cerrar Sesión")
             }
         }
+    }
+
+    // --- DIÁLOGO DE CAMBIO DE CONTRASEÑA (CON ICONO OJO Y CONFIRMACIÓN) ---
+    if (showPasswordDialog) {
+        val authViewModel = remember { AuthViewModel() }
+        val newPasswordStrength = authViewModel.getPasswordStrength(newPasswordInput)
+        val strengthColor = when {
+            newPasswordStrength < 0.35f -> MaterialTheme.colorScheme.error
+            newPasswordStrength < 0.7f -> androidx.compose.ui.graphics.Color(0xFFFFA000)
+            else -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+        }
+
+        AlertDialog(
+            onDismissRequest = { showPasswordDialog = false },
+            title = { Text("Cambiar Contraseña") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = newPasswordInput,
+                        onValueChange = { newPasswordInput = it },
+                        label = { Text("Nueva contraseña (min. 6)") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = "Mostrar/ocultar contraseña"
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (newPasswordInput.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LinearProgressIndicator(
+                            progress = { newPasswordStrength },
+                            modifier = Modifier.fillMaxWidth().height(6.dp),
+                            color = strengthColor
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = confirmPasswordInput,
+                        onValueChange = { confirmPasswordInput = it },
+                        label = { Text("Confirmar contraseña") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (newPasswordInput.length < 6) {
+                        Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (newPasswordInput != confirmPasswordInput) {
+                        Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    authRepository.updatePassword(newPasswordInput) { success, err ->
+                        if (success) {
+                            Toast.makeText(context, "Contraseña actualizada correctamente", Toast.LENGTH_SHORT).show()
+                            showPasswordDialog = false
+                            newPasswordInput = ""
+                            confirmPasswordInput = ""
+                        } else {
+                            Toast.makeText(context, err ?: "Error al actualizar contraseña", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    // --- DIÁLOGO DE ELIMINAR CUENTA ---
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("¿Eliminar Cuenta?") },
+            text = { Text("Esta acción es permanente y eliminará todos tus favoritos y preferencias de Firebase.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        authRepository.deleteAccount { success, err ->
+                            if (success) {
+                                Toast.makeText(context, "Cuenta eliminada", Toast.LENGTH_SHORT).show()
+                                onLogout()
+                            } else {
+                                Toast.makeText(context, err ?: "Error al eliminar cuenta", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Confirmar Borrado") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
