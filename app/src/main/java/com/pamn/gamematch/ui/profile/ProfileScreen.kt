@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.pamn.gamematch.data.model.User
 import com.pamn.gamematch.data.repository.AuthRepository
 import com.pamn.gamematch.data.repository.GameRepository
 import com.pamn.gamematch.ui.auth.AuthViewModel
@@ -30,7 +31,6 @@ import com.pamn.gamematch.ui.components.AvatarSelectionDialog
 import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 import java.util.Calendar
-import com.pamn.gamematch.data.model.User
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -140,9 +140,8 @@ fun ProfileScreen(
                             onToggleDarkModeGlobal(fetchedDarkMode)
                         }
                         selectedLanguage = doc.getString("language") ?: "Español"
-                        isLoading = false
-
                         profilePictureUrl = doc.getString("profilePictureUrl") ?: "https://api.dicebear.com/7.x/bottts/png?seed=default"
+                        isLoading = false
                     }
                     .addOnFailureListener { isLoading = false }
             }
@@ -191,8 +190,8 @@ fun ProfileScreen(
                     ) {
                         ProfileAvatar(
                             imageUrl = profilePictureUrl,
-                            isEditing = isEditing, // Muestra el icono de cámara al estar en modo edición
-                            onClick = { showAvatarSelector = true } // Se puede hacer clic para editar
+                            isEditing = isEditing,
+                            onClick = { showAvatarSelector = true }
                         )
                     }
 
@@ -299,6 +298,7 @@ fun ProfileScreen(
                                 )
 
                                 ProfileInfoRow(label = "Rango de Precio", value = "${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €")
+                                ProfileInfoRow(label = "Solo Estrenados", value = if (onlyReleased) "Sí" else "No (Incluye próximos)")
                                 ProfileInfoRow(label = "Géneros Favoritos", value = if (selectedGenres.isEmpty()) "Todos" else selectedGenres.joinToString(", "))
                             }
                         }
@@ -325,7 +325,7 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { focusState ->
-                                    isUsernameFocused = focusState.isFocused // Captura cuando el recuadro está azul
+                                    isUsernameFocused = focusState.isFocused
                                     if (focusState.isFocused) {
                                         usernameHasFocused = true
                                     } else if (usernameHasFocused) {
@@ -383,6 +383,39 @@ fun ProfileScreen(
                                     onValueChange = { priceRange = it },
                                     valueRange = 0f..100f,
                                     steps = 19
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Switch para incluir o excluir juegos sin estrenar
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Solo juegos ya estrenados",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (onlyReleased) "Ocultar juegos en desarrollo/próximos" else "Mostrar también juegos no lanzados",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = onlyReleased,
+                                    onCheckedChange = { onlyReleased = it }
                                 )
                             }
                         }
@@ -512,7 +545,7 @@ fun ProfileScreen(
             }
         }
 
-        // --- DIÁLOGO DE CAMBIO DE CONTRASEÑA ---
+        // --- DIÁLOGOS DE CONTRASEÑA Y ELIMINACIÓN ---
         if (showPasswordDialog) {
             val authViewModel = remember { AuthViewModel() }
             val isNewPasswordValid = newPasswordInput.length >= 6
@@ -647,7 +680,6 @@ fun ProfileScreen(
             )
         }
 
-        // --- DIÁLOGO DE ELIMINAR CUENTA ---
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },

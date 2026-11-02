@@ -55,6 +55,7 @@ fun OnboardingScreen(
 
         var profilePictureUrl by remember { mutableStateOf("https://api.dicebear.com/7.x/bottts/png?seed=default") }
         var showAvatarSelector by remember { mutableStateOf(false) }
+        var onlyReleased by remember { mutableStateOf(true) }
 
         val isYearValid = remember(birthYear) {
             if (birthYear.isEmpty()) true
@@ -261,6 +262,39 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                // Ajuste de Juegos No Estrenados
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Solo juegos ya estrenados",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (onlyReleased) "No se mostrarán próximos lanzamientos" else "Se incluirán juegos aún no lanzados",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = onlyReleased,
+                            onCheckedChange = { onlyReleased = it }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 // Géneros Preferidos
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -313,7 +347,7 @@ fun OnboardingScreen(
                             preferredGenres = selectedGenres.toList(),
                             minPrice = priceRange.start,
                             maxPrice = priceRange.endInclusive,
-                            onlyReleased = true,
+                            onlyReleased = onlyReleased,
                             birthYear = birthYear,
                             isDarkMode = isDarkMode,
                             language = selectedLanguage,
