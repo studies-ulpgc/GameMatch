@@ -13,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -34,14 +33,11 @@ fun SwipeScreen(
     val context = LocalContext.current
     val bgColor = MaterialTheme.colorScheme.background
 
-    // Determinamos si el fondo actual es oscuro inspeccionando la luminancia de la paleta
     val isDarkTheme = MaterialTheme.colorScheme.background.red < 0.5f
 
-    // Botón Dislike (❌): Fondo blanco con icono negro en modo oscuro
     val dislikeBgColor = if (isDarkTheme) Color.White else Color(0xFF1E1E24)
     val dislikeIconColor = if (isDarkTheme) Color.Black else Color.White
 
-    // Botones secundarios (↺ e ℹ️): Círculo oscuro/negro en modo oscuro, y gris visible en modo claro
     val secondaryBtnBg = if (isDarkTheme) Color(0xFF2C2C35) else Color(0xFFD1D5DB)
     val secondaryIconColor = if (isDarkTheme) Color.White else Color(0xFF171A21)
 
@@ -58,9 +54,16 @@ fun SwipeScreen(
 
     var history by remember { mutableStateOf(listOf<Game>()) }
     var selectedGameForModal by remember { mutableStateOf<Game?>(null) }
+    var dragProgress by remember { mutableFloatStateOf(0f) }
 
     val currentGame = gameList.firstOrNull()
     val nextGame = gameList.getOrNull(1)
+
+    // Escalado progresivo de la tarjeta trasera
+    val bgScale = 0.90f + (dragProgress * 0.10f)
+
+    // Oscurecimiento más fuerte (empieza en 0.85f) y dura más tiempo hasta que está totalmente en el centro
+    val overlayAlpha = (0.85f - (dragProgress * 0.85f)).coerceIn(0f, 0.85f)
 
     Box(
         modifier = Modifier
@@ -72,13 +75,12 @@ fun SwipeScreen(
             contentAlignment = Alignment.Center
         ) {
             if (currentGame != null) {
-                // Tarjeta de fondo
+                // Tarjeta de fondo con sombra negra intensa y progresiva
                 nextGame?.let { next ->
                     GameCard(
                         game = next,
-                        modifier = Modifier
-                            .scale(0.95f)
-                            .alpha(0.45f)
+                        overlayAlpha = overlayAlpha,
+                        modifier = Modifier.scale(bgScale)
                     )
                 }
 
@@ -86,16 +88,22 @@ fun SwipeScreen(
                 key(currentGame.id) {
                     GameCard(
                         game = currentGame,
-                        onSwipeLeft = { // Izquierda -> Deschar ❌
+                        overlayAlpha = 0f,
+                        onDragProgress = { progress ->
+                            dragProgress = progress
+                        },
+                        onSwipeLeft = {
                             history = history + currentGame
                             gameList = gameList.drop(1)
+                            dragProgress = 0f
                         },
-                        onSwipeRight = { // Derecha -> Guardar en Favoritos ❤️
+                        onSwipeRight = {
                             gameRepository?.saveLikedGame(currentGame.id) { success ->
                                 if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
                             }
                             history = history + currentGame
                             gameList = gameList.drop(1)
+                            dragProgress = 0f
                         }
                     )
                 }
@@ -123,6 +131,7 @@ fun SwipeScreen(
                     if (currentGame != null) {
                         history = history + currentGame
                         gameList = gameList.drop(1)
+                        dragProgress = 0f
                     }
                 },
                 modifier = Modifier
@@ -144,6 +153,7 @@ fun SwipeScreen(
                         val last = history.last()
                         history = history.dropLast(1)
                         gameList = listOf(last) + gameList
+                        dragProgress = 0f
 
                         gameRepository?.removeLikedGame(last.id) { success ->
                             if (success) {
@@ -194,6 +204,7 @@ fun SwipeScreen(
                         }
                         history = history + currentGame
                         gameList = gameList.drop(1)
+                        dragProgress = 0f
                     }
                 },
                 modifier = Modifier

@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,8 +25,10 @@ import kotlin.math.roundToInt
 @Composable
 fun GameCard(
     game: Game,
+    overlayAlpha: Float = 0f,
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
+    onDragProgress: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val bgColor = MaterialTheme.colorScheme.background
@@ -33,22 +36,32 @@ fun GameCard(
 
     var offsetX by remember { mutableFloatStateOf(0f) }
 
+    // Ángulo de inclinación suave según el arrastre
+    val rotation = (offsetX / 600f) * 15f
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .offset { IntOffset(offsetX.roundToInt(), 0) }
-            .pointerInput(Unit) {
+            .graphicsLayer {
+                rotationZ = rotation
+            }
+            .pointerInput(game.id) {
                 detectHorizontalDragGestures(
                     onDragEnd = {
-                        if (offsetX < -150f) {
-                            onSwipeRight() // Guardar / Favoritos ❤️
-                        } else if (offsetX > 150f) {
-                            onSwipeLeft()  // Descartar ❌
+                        if (offsetX > 120f) {
+                            onSwipeLeft()
+                        } else if (offsetX < -120f) {
+                            onSwipeRight()
                         }
                         offsetX = 0f
+                        onDragProgress(0f)
                     },
-                    onHorizontalDrag = { _, dragAmount ->
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
                         offsetX += dragAmount
+                        val progress = (kotlin.math.abs(offsetX) / 300f).coerceIn(0f, 1f)
+                        onDragProgress(progress)
                     }
                 )
             }
@@ -60,7 +73,16 @@ fun GameCard(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Degradado inferior
+        // Capa de velo negro más intensa que se desvanece al acercarse al centro
+        if (overlayAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = overlayAlpha))
+            )
+        }
+
+        // Degradado inferior para legibilidad del texto
         Box(
             modifier = Modifier
                 .fillMaxWidth()
