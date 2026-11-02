@@ -2,7 +2,6 @@ package com.pamn.gamematch.ui.swipe
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -33,16 +32,18 @@ fun SwipeScreen(
     gameRepository: GameRepository? = if (LocalInspectionMode.current) null else remember { GameRepository() }
 ) {
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
     val bgColor = MaterialTheme.colorScheme.background
 
-    // Colores dinámicos del botón Dislike (❌)
-    val dislikeBgColor = if (isDark) Color.White else Color(0xFF1E1E24)
-    val dislikeIconColor = if (isDark) Color.Black else Color.White
+    // Determinamos si el fondo actual es oscuro inspeccionando la luminancia de la paleta
+    val isDarkTheme = MaterialTheme.colorScheme.background.red < 0.5f
 
-    // Colores dinámicos de los botones secundarios (↺ e ℹ️)
-    val secondaryBtnBg = if (isDark) Color(0xFF2C2C35) else Color(0xFFE5E7EB)
-    val secondaryIconColor = if (isDark) Color.White else Color(0xFF171A21)
+    // Botón Dislike (❌): Fondo blanco con icono negro en modo oscuro
+    val dislikeBgColor = if (isDarkTheme) Color.White else Color(0xFF1E1E24)
+    val dislikeIconColor = if (isDarkTheme) Color.Black else Color.White
+
+    // Botones secundarios (↺ e ℹ️): Círculo oscuro/negro en modo oscuro, y gris visible en modo claro
+    val secondaryBtnBg = if (isDarkTheme) Color(0xFF2C2C35) else Color(0xFFD1D5DB)
+    val secondaryIconColor = if (isDarkTheme) Color.White else Color(0xFF171A21)
 
     var gameList by remember {
         mutableStateOf(
@@ -66,13 +67,12 @@ fun SwipeScreen(
             .fillMaxSize()
             .background(bgColor)
     ) {
-        // Pila de Tarjetas a pantalla completa
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             if (currentGame != null) {
-                // 1. Tarjeta siguiente
+                // Tarjeta de fondo
                 nextGame?.let { next ->
                     GameCard(
                         game = next,
@@ -82,15 +82,15 @@ fun SwipeScreen(
                     )
                 }
 
-                // 2. Tarjeta actual
+                // Tarjeta interactiva principal
                 key(currentGame.id) {
                     GameCard(
                         game = currentGame,
-                        onSwipeLeft = { // Izquierda = Dislike ❌
+                        onSwipeLeft = { // Izquierda -> Deschar ❌
                             history = history + currentGame
                             gameList = gameList.drop(1)
                         },
-                        onSwipeRight = { // Derecha = Like ❤️
+                        onSwipeRight = { // Derecha -> Guardar en Favoritos ❤️
                             gameRepository?.saveLikedGame(currentGame.id) { success ->
                                 if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
                             }
@@ -108,7 +108,7 @@ fun SwipeScreen(
             }
         }
 
-        // Botones de interacción flotantes sobre la imagen
+        // Botones inferiores
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -117,7 +117,7 @@ fun SwipeScreen(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Dislike (❌) - Invertido según Modo Oscuro/Claro
+            // 1. Dislike (❌)
             IconButton(
                 onClick = {
                     if (currentGame != null) {
@@ -137,7 +137,7 @@ fun SwipeScreen(
                 )
             }
 
-            // 2. Rebobinar / Deshacer (↺)
+            // 2. Rebobinar (↺)
             IconButton(
                 onClick = {
                     if (history.isNotEmpty()) {
@@ -166,7 +166,7 @@ fun SwipeScreen(
                 )
             }
 
-            // 3. Pop-Up Más Información (ℹ️)
+            // 3. Info (ℹ️)
             IconButton(
                 onClick = {
                     if (currentGame != null) {
@@ -180,7 +180,7 @@ fun SwipeScreen(
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = "Información",
-                    tint = SteamAccentBlue,
+                    tint = if (isDarkTheme) secondaryIconColor else SteamAccentBlue,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -210,7 +210,6 @@ fun SwipeScreen(
         }
     }
 
-    // Modal de Detalles
     selectedGameForModal?.let { game ->
         GameDetailModal(
             game = game,

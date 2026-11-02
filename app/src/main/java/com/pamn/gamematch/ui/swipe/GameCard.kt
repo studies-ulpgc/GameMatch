@@ -40,13 +40,10 @@ fun GameCard(
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragEnd = {
-                        // Derecha (> 0) -> Like ❤️
-                        if (offsetX > 180f) {
-                            onSwipeRight()
-                        }
-                        // Izquierda (< 0) -> Dislike ❌
-                        else if (offsetX < -180f) {
-                            onSwipeLeft()
+                        if (offsetX < -150f) {
+                            onSwipeRight() // Guardar / Favoritos ❤️
+                        } else if (offsetX > 150f) {
+                            onSwipeLeft()  // Descartar ❌
                         }
                         offsetX = 0f
                     },
@@ -56,7 +53,6 @@ fun GameCard(
                 )
             }
     ) {
-        // Imagen ocupando todo el contenedor hasta los bordes
         AsyncImage(
             model = if (game.imageUrl.isBlank()) "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg" else game.imageUrl,
             contentDescription = game.title,
@@ -64,7 +60,7 @@ fun GameCard(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Degradado inferior integrado con el fondo
+        // Degradado inferior
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -82,7 +78,7 @@ fun GameCard(
                 )
         )
 
-        // Texto e información
+        // Título y detalles
         Column(
             modifier = Modifier
                 .fillMaxWidth()
