@@ -29,7 +29,9 @@ import java.util.Calendar
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit = {},
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    isDarkModeGlobal: Boolean = true,
+    onToggleDarkModeGlobal: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
@@ -170,8 +172,9 @@ fun ProfileScreen(
                         Text("Tema Oscuro")
                         Switch(
                             checked = isDarkMode,
-                            onCheckedChange = {
-                                isDarkMode = it
+                            onCheckedChange = { newMode ->
+                                isDarkMode = newMode
+                                onToggleDarkModeGlobal(newMode) // Actualiza el tema globalmente
                                 updateQuickSettings(isDarkMode, selectedLanguage)
                             }
                         )

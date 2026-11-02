@@ -1,116 +1,158 @@
 package com.pamn.gamematch.ui.swipe
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.pamn.gamematch.data.model.Game
-import kotlinx.coroutines.launch
+import com.pamn.gamematch.ui.theme.SteamAccentBlue
+import com.pamn.gamematch.ui.theme.UnreleasedBadgeColor
+import kotlin.math.roundToInt
 
 @Composable
 fun GameCard(
     game: Game,
-    onSwipeLeft: () -> Unit,
-    onSwipeRight: () -> Unit,
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val offsetX = remember { Animatable(0f) }
-    val offsetY = remember { Animatable(0f) }
+    val bgColor = MaterialTheme.colorScheme.background
+    val textColor = MaterialTheme.colorScheme.onBackground
 
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    var offsetX by remember { mutableFloatStateOf(0f) }
+
+    Box(
         modifier = modifier
-            .fillMaxWidth()
-            .height(500.dp)
-            .graphicsLayer(
-                translationX = offsetX.value,
-                translationY = offsetY.value,
-                rotationZ = offsetX.value / 20f // Efecto de inclinación al arrastrar
-            )
+            .fillMaxSize()
+            .offset { IntOffset(offsetX.roundToInt(), 0) }
             .pointerInput(Unit) {
-                detectDragGestures(
+                detectHorizontalDragGestures(
                     onDragEnd = {
-                        coroutineScope.launch {
-                            when {
-                                offsetX.value > 300f -> {
-                                    // Deslizado a la derecha (Like)
-                                    offsetX.animateTo(1000f, tween(200))
-                                    onSwipeRight()
-                                }
-                                offsetX.value < -300f -> {
-                                    // Deslizado a la izquierda (Dislike)
-                                    offsetX.animateTo(-1000f, tween(200))
-                                    onSwipeLeft()
-                                }
-                                else -> {
-                                    // Si no arrastró lo suficiente, vuelve al centro
-                                    offsetX.animateTo(0f, tween(200))
-                                    offsetY.animateTo(0f, tween(200))
-                                }
-                            }
+                        // Derecha (> 0) -> Like ❤️
+                        if (offsetX > 180f) {
+                            onSwipeRight()
                         }
+                        // Izquierda (< 0) -> Dislike ❌
+                        else if (offsetX < -180f) {
+                            onSwipeLeft()
+                        }
+                        offsetX = 0f
                     },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        coroutineScope.launch {
-                            offsetX.snapTo(offsetX.value + dragAmount.x)
-                            offsetY.snapTo(offsetY.value + dragAmount.y)
-                        }
+                    onHorizontalDrag = { _, dragAmount ->
+                        offsetX += dragAmount
                     }
                 )
             }
     ) {
+        // Imagen ocupando todo el contenedor hasta los bordes
+        AsyncImage(
+            model = if (game.imageUrl.isBlank()) "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg" else game.imageUrl,
+            contentDescription = game.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Degradado inferior integrado con el fondo
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.55f)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            bgColor.copy(alpha = 0.65f),
+                            bgColor.copy(alpha = 0.95f),
+                            bgColor
+                        )
+                    )
+                )
+        )
+
+        // Texto e información
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .fillMaxWidth()
+                .align(Alignment.BottomStart)
+                .padding(horizontal = 20.dp, vertical = 85.dp)
         ) {
-            // Cabecera e información del juego
-            Column {
-                Text(
-                    text = game.title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = game.genre,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = game.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Precio y etiqueta
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (game.price == 0.0) "Gratis" else "${game.price} €",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = game.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = textColor
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = game.genre,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = textColor.copy(alpha = 0.8f)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (!game.isReleased) {
+                        Surface(
+                            color = UnreleasedBadgeColor,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Próximamente",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    Surface(
+                        color = SteamAccentBlue,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "${game.price} €",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Black
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 600)
+@Composable
+fun GameCardPreview() {
+    GameCard(
+        game = Game(
+            id = "1",
+            title = "GTA VI",
+            description = "Acción en mundo abierto",
+            imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
+            genre = "Acción • Mundo Abierto",
+            price = 79.99,
+            releaseDate = "2026",
+            isReleased = false
+        )
+    )
 }
