@@ -6,10 +6,12 @@ data class Game(
     val description: String = "",
     val imageUrl: String = "",
     val genre: String = "",
-    val price: Double = 0.0,
+    val price: Double? = null,
     val releaseDate: String = "Ya disponible",
     val isReleased: Boolean = true,
     val platforms: List<String> = listOf("PC", "PlayStation", "Xbox", "Nintendo"),
+    val steamAppId: Int? = null,
+    val rating: Double = 0.0,
     val isFeatured: Boolean = false,
     val isTrending: Boolean = false
 )

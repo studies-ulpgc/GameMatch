@@ -1,5 +1,7 @@
 package com.pamn.gamematch.ui.detail
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -73,12 +76,26 @@ fun GameDetailModal(
     var userRatingInput by remember { mutableIntStateOf(5) }
     var userCommentInput by remember { mutableStateOf("") }
 
-    // Al abrir el diálogo para un juego, reiniciar estado del formulario y cargar reseñas
+    // Función auxiliar para abrir la tienda de Steam
+    fun openSteamStore(steamAppId: Int) {
+        try {
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://store.steampowered.com/app/$steamAppId/")
+            )
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "No se pudo abrir la tienda de Steam", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Al abrir el diálogo para un juego, reiniciar estado del formulario y cargar reseñas y precio en Steam
     LaunchedEffect(game.id) {
         isEditingOwnReview = false
         userRatingInput = 5
         userCommentInput = ""
         viewModel.loadReviewsForGame(game.id)
+        viewModel.loadSteamPrice(game.steamAppId, game.price)
     }
 
     // Precargar datos del usuario solo si ya existe una reseña registrada para este juego
@@ -158,16 +175,50 @@ fun GameDetailModal(
                             fontWeight = FontWeight.SemiBold
                         )
 
-                        Surface(
-                            color = SteamAccentBlue,
-                            shape = RoundedCornerShape(6.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = if (game.price == 0.0) "Gratis" else "${game.price} €",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.Black
-                            )
+                            if (game.steamAppId != null) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(6.dp),
+                                    onClick = { openSteamStore(game.steamAppId) }
+                                ) {
+                                    Text(
+                                        text = "Steam 🛒",
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                color = SteamAccentBlue,
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                if (uiState.isPriceLoading) {
+                                    Box(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(12.dp),
+                                            color = Color.Black,
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = uiState.priceDisplay ?: (if (game.price == null || game.price == 0.0) "Gratis" else "${game.price} €"),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.Black
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -199,6 +250,16 @@ fun GameDetailModal(
                         text = game.description,
                         style = MaterialTheme.typography.bodyMedium
                     )
+
+                    if (game.steamAppId != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedButton(
+                            onClick = { openSteamStore(game.steamAppId) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Ver ficha oficial en Steam 🛒")
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
                     HorizontalDivider()

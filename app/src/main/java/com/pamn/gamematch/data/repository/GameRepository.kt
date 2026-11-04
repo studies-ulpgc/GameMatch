@@ -1,21 +1,174 @@
 package com.pamn.gamematch.data.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.pamn.gamematch.BuildConfig
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.model.GameReview
 import com.pamn.gamematch.data.model.User
+import com.pamn.gamematch.data.remote.RetrofitClient
+import com.pamn.gamematch.data.remote.mapper.toDomain
+import kotlinx.coroutines.tasks.await
 
 class GameRepository {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
     /**
-     * Catálogo general de juegos de la aplicación.
+     * Consulta el precio formateado de un juego en la tienda pública de Steam bajo demanda.
      */
-    fun getAllGames(): List<Game> {
+    suspend fun getSteamPrice(steamAppId: Int): Result<String?> {
+        return runCatching {
+            val response = RetrofitClient.steamApiService.getAppDetails(appIds = steamAppId)
+            val appContainer = response[steamAppId.toString()]
+            if (appContainer?.success == true) {
+                val appData = appContainer.data
+                if (appData?.isFree == true) {
+                    "Gratis"
+                } else {
+                    appData?.priceOverview?.finalFormatted
+                }
+            } else {
+                null
+            }
+        }.onFailure { e ->
+            Log.w("GameRepository", "Error consultando precio en Steam para appId $steamAppId: ${e.localizedMessage}")
+        }
+    }
+
+    /**
+     * Consulta el catálogo de juegos exclusivamente desde la colección 'games' en Cloud Firestore.
+     * Devuelve Result.success(cachedGames) si existen registros, Result.success(emptyList()) si está vacía,
+     * o Result.failure(e) si ocurre un error de red/permisos en Firestore.
+     */
+    suspend fun getGamesCatalog(
+        page: Int = 1,
+        pageSize: Int = 20,
+        searchQuery: String? = null,
+        genres: String? = null
+    ): Result<List<Game>> {
+        return try {
+            val snapshot = db.collection("games").limit(pageSize.toLong()).get().await()
+            var cachedGames = snapshot.documents.mapNotNull { doc ->
+                val id = doc.id
+                val title = doc.getString("title") ?: doc.getString("name") ?: ""
+                val description = doc.getString("description") ?: ""
+                val imageUrl = doc.getString("imageUrl") ?: doc.getString("background_image") ?: ""
+                val genre = doc.getString("genre") ?: ""
+                val price = doc.getDouble("price")
+                val releaseDate = doc.getString("releaseDate") ?: "Disponible"
+                val isReleased = doc.getBoolean("isReleased") ?: true
+                val platforms = (doc.get("platforms") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                val steamAppId = doc.getLong("steamAppId")?.toInt()
+                val rating = doc.getDouble("rating") ?: 0.0
+                val isFeatured = doc.getBoolean("isFeatured") ?: false
+                val isTrending = doc.getBoolean("isTrending") ?: false
+
+                if (title.isNotBlank()) {
+                    Game(
+                        id = id,
+                        title = title,
+                        description = description,
+                        imageUrl = imageUrl,
+                        genre = genre,
+                        price = price,
+                        releaseDate = releaseDate,
+                        isReleased = isReleased,
+                        platforms = platforms,
+                        steamAppId = steamAppId,
+                        rating = rating,
+                        isFeatured = isFeatured,
+                        isTrending = isTrending
+                    )
+                } else null
+            }
+
+            if (!searchQuery.isNullOrBlank()) {
+                val q = searchQuery.trim()
+                cachedGames = cachedGames.filter {
+                    it.title.contains(q, ignoreCase = true) || it.genre.contains(q, ignoreCase = true)
+                }
+            }
+
+            if (!genres.isNullOrBlank()) {
+                val g = genres.trim()
+                cachedGames = cachedGames.filter {
+                    it.genre.contains(g, ignoreCase = true)
+                }
+            }
+
+            if (cachedGames.isNotEmpty()) {
+                Log.i("GameRepository", "Cargados ${cachedGames.size} juegos desde Firestore.")
+                Result.success(cachedGames)
+            } else {
+                Log.i("GameRepository", "La colección 'games' en Firestore está vacía.")
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Log.e("GameRepository", "Error al consultar la colección 'games' en Firestore: ${e.localizedMessage}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Sincronización aislada desde RAWG API para alimentar la colección 'games' en Cloud Firestore.
+     */
+    suspend fun syncCatalogFromRawg(pageSize: Int = 40): Result<Int> {
+        val apiKey = BuildConfig.RAWG_API_KEY
+        if (apiKey.isBlank()) {
+            val err = "RAWG API Key no está configurada en BuildConfig / local.properties"
+            Log.w("GameRepository", err)
+            return Result.failure(IllegalStateException(err))
+        }
+
+        return try {
+            val response = RetrofitClient.rawgApiService.getGames(
+                apiKey = apiKey,
+                pageSize = pageSize
+            )
+            val domainGames = response.results.map { it.toDomain() }
+
+            if (domainGames.isEmpty()) {
+                return Result.failure(IllegalStateException("RAWG API no devolvió ningún juego"))
+            }
+
+            val batch = db.batch()
+            domainGames.forEach { game ->
+                val docRef = db.collection("games").document(game.id)
+                val data = hashMapOf(
+                    "title" to game.title,
+                    "description" to game.description,
+                    "imageUrl" to game.imageUrl,
+                    "genre" to game.genre,
+                    "price" to game.price,
+                    "releaseDate" to game.releaseDate,
+                    "isReleased" to game.isReleased,
+                    "platforms" to game.platforms,
+                    "steamAppId" to game.steamAppId,
+                    "rating" to game.rating,
+                    "isFeatured" to game.isFeatured,
+                    "isTrending" to game.isTrending,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+                batch.set(docRef, data, SetOptions.merge())
+            }
+            batch.commit().await()
+
+            Log.i("GameRepository", "Sincronizados ${domainGames.size} juegos de RAWG a Firestore.")
+            Result.success(domainGames.size)
+        } catch (e: Exception) {
+            Log.e("GameRepository", "Error sincronizando catálogo con RAWG: ${e.localizedMessage}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Método auxiliar de apoyo exclusivamente para previsualizaciones (@Preview) en Jetpack Compose.
+     */
+    fun getPreviewGames(): List<Game> {
         return listOf(
             Game(
                 id = "1",
@@ -42,100 +195,8 @@ class GameRepository {
                 platforms = listOf("PlayStation", "Xbox"),
                 isFeatured = true,
                 isTrending = true
-            ),
-            Game(
-                id = "3",
-                title = "Hollow Knight: Silksong",
-                description = "Explora el reino de Pharloom guiando a Hornet en una desafiante aventura de plataformas y combate 2D.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg",
-                genre = "Indie",
-                price = 19.99,
-                releaseDate = "Por anunciar",
-                isReleased = false,
-                platforms = listOf("PC", "Nintendo", "PlayStation", "Xbox"),
-                isFeatured = false,
-                isTrending = true
-            ),
-            Game(
-                id = "4",
-                title = "Elden Ring",
-                description = "Desafiante juego de rol y acción de ambiente fantástico creado por Hidetaka Miyazaki y George R. R. Martin.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/header.jpg",
-                genre = "RPG",
-                price = 69.99,
-                releaseDate = "Disponible",
-                isReleased = true,
-                platforms = listOf("PC", "PlayStation", "Xbox"),
-                isFeatured = true,
-                isTrending = true
-            ),
-            Game(
-                id = "5",
-                title = "Cyberpunk 2077: Phantom Liberty",
-                description = "Una aventura de intriga y espionaje ambientada en el distrito sin ley de Dogtown en Night City.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
-                genre = "RPG",
-                price = 29.99,
-                releaseDate = "Disponible",
-                isReleased = true,
-                platforms = listOf("PC", "PlayStation", "Xbox"),
-                isFeatured = false,
-                isTrending = true
-            ),
-            Game(
-                id = "6",
-                title = "Super Mario Bros. Wonder",
-                description = "La evolución clásica del scroll lateral en 2D de Mario con sorprendentes Flores Maravilla.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg",
-                genre = "Plataformas",
-                price = 59.99,
-                releaseDate = "Disponible",
-                isReleased = true,
-                platforms = listOf("Nintendo"),
-                isFeatured = true,
-                isTrending = false
-            ),
-            Game(
-                id = "7",
-                title = "God of War Ragnarök",
-                description = "Kratos y Atreus se embarcan en un viaje místico en busca de respuestas antes de la batalla del fin del mundo.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/header.jpg",
-                genre = "Acción",
-                price = 69.99,
-                releaseDate = "Disponible",
-                isReleased = true,
-                platforms = listOf("PlayStation", "PC"),
-                isFeatured = true,
-                isTrending = false
-            ),
-            Game(
-                id = "8",
-                title = "Halo Infinite",
-                description = "La legendaria saga regresa con la campaña de Master Chief más ambiciosa hasta la fecha.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
-                genre = "Shooter",
-                price = 39.99,
-                releaseDate = "Disponible",
-                isReleased = true,
-                platforms = listOf("Xbox", "PC"),
-                isFeatured = false,
-                isTrending = true
             )
         )
-    }
-
-    /**
-     * Devuelve únicamente los juegos marcados como destacados (+ Destacado).
-     */
-    fun getFeaturedGames(): List<Game> {
-        return getAllGames().filter { it.isFeatured }
-    }
-
-    /**
-     * Devuelve únicamente los juegos marcados como en tendencia (+ Trending).
-     */
-    fun getTrendingGames(): List<Game> {
-        return getAllGames().filter { it.isTrending }
     }
 
     fun saveLikedGame(gameId: String, onResult: (Boolean) -> Unit) {

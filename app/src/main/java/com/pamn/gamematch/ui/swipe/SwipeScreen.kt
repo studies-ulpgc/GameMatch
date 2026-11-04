@@ -2,21 +2,42 @@ package com.pamn.gamematch.ui.swipe
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pamn.gamematch.data.model.Game
@@ -42,15 +63,25 @@ fun SwipeScreen(
     val secondaryBtnBg = if (isDarkTheme) Color(0xFF2C2C35) else Color(0xFFD1D5DB)
     val secondaryIconColor = if (isDarkTheme) Color.White else Color(0xFF171A21)
 
-    var gameList by remember {
-        mutableStateOf(
-            gameRepository?.getAllGames() ?: listOf(
-                Game("1", "The Legend of Zelda", "Aventura épica de exploración e investigación en mundo abierto.", "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/header.jpg", "Aventura", 59.99, "Disponible", true),
-                Game("2", "GTA VI", "Siguiente entrega de la aclamada franquicia de acción en mundo abierto.", "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg", "Acción", 79.99, "Lanzamiento: Otoño 2026", false),
-                Game("3", "Hollow Knight: Silksong", "Explora el reino de Pharloom guiando a Hornet en una aventura 2D.", "https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg", "Indie", 19.99, "Por anunciar", false),
-                Game("4", "Elden Ring", "Desafiante juego de rol en un vasto e imponente mundo de fantasía.", "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/header.jpg", "RPG", 69.99, "Disponible", true)
-            )
-        )
+    var isLoadingCatalog by remember { mutableStateOf(true) }
+    var gameList by remember { mutableStateOf<List<Game>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        if (gameRepository != null) {
+            val result = gameRepository.getGamesCatalog()
+            result
+                .onSuccess { catalog ->
+                    gameList = catalog
+                    isLoadingCatalog = false
+                }
+                .onFailure {
+                    gameList = emptyList()
+                    isLoadingCatalog = false
+                }
+        } else {
+            gameList = gameRepository?.getPreviewGames() ?: emptyList()
+            isLoadingCatalog = false
+        }
     }
 
     var history by remember { mutableStateOf(listOf<Game>()) }
@@ -75,7 +106,9 @@ fun SwipeScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            if (currentGame != null) {
+            if (isLoadingCatalog) {
+                CircularProgressIndicator()
+            } else if (currentGame != null) {
                 // Tarjeta de fondo con sombra negra intensa y progresiva
                 nextGame?.let { next ->
                     GameCard(
@@ -109,115 +142,131 @@ fun SwipeScreen(
                     )
                 }
             } else {
-                Text(
-                    text = "¡No hay más juegos por descubrir!",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text = "No hay juegos disponibles en el catálogo.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Sincroniza el catálogo desde tu perfil (Admin).",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
 
-        // Botones inferiores
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .align(Alignment.BottomCenter),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 1. Dislike (❌)
-            IconButton(
-                onClick = {
-                    if (currentGame != null) {
-                        history = history + currentGame
-                        gameList = gameList.drop(1)
-                        dragProgress = 0f
-                    }
-                },
+        if (!isLoadingCatalog && currentGame != null) {
+            // Botones inferiores
+            Row(
                 modifier = Modifier
-                    .size(56.dp)
-                    .background(dislikeBgColor, CircleShape)
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .align(Alignment.BottomCenter),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Dislike",
-                    tint = dislikeIconColor,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+                // 1. Dislike (❌)
+                IconButton(
+                    onClick = {
+                        if (currentGame != null) {
+                            history = history + currentGame
+                            gameList = gameList.drop(1)
+                            dragProgress = 0f
+                        }
+                    },
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(dislikeBgColor, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dislike",
+                        tint = dislikeIconColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
 
-            // 2. Rebobinar (↺)
-            IconButton(
-                onClick = {
-                    if (history.isNotEmpty()) {
-                        val last = history.last()
-                        history = history.dropLast(1)
-                        gameList = listOf(last) + gameList
-                        dragProgress = 0f
+                // 2. Rebobinar (↺)
+                IconButton(
+                    onClick = {
+                        if (history.isNotEmpty()) {
+                            val last = history.last()
+                            history = history.dropLast(1)
+                            gameList = listOf(last) + gameList
+                            dragProgress = 0f
 
-                        gameRepository?.removeLikedGame(last.id) { success ->
-                            if (success) {
-                                Toast.makeText(context, "Deshecho y eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                            gameRepository?.removeLikedGame(last.id) { success ->
+                                if (success) {
+                                    Toast.makeText(context, "Deshecho y eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                                }
                             }
+                        } else {
+                            Toast.makeText(context, "No hay historial para deshacer", Toast.LENGTH_SHORT).show()
                         }
-                    } else {
-                        Toast.makeText(context, "No hay historial para deshacer", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(secondaryBtnBg, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Deshacer",
-                    tint = secondaryIconColor,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+                    },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(secondaryBtnBg, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Deshacer",
+                        tint = secondaryIconColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
 
-            // 3. Info (ℹ️)
-            IconButton(
-                onClick = {
-                    if (currentGame != null) {
-                        selectedGameForModal = currentGame
-                    }
-                },
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(secondaryBtnBg, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Información",
-                    tint = if (isDarkTheme) secondaryIconColor else SteamAccentBlue,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            // 4. Like (❤️)
-            IconButton(
-                onClick = {
-                    if (currentGame != null) {
-                        gameRepository?.saveLikedGame(currentGame.id) { success ->
-                            if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
+                // 3. Info (ℹ️)
+                IconButton(
+                    onClick = {
+                        if (currentGame != null) {
+                            selectedGameForModal = currentGame
                         }
-                        history = history + currentGame
-                        gameList = gameList.drop(1)
-                        dragProgress = 0f
-                    }
-                },
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(LikeColor, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = "Like",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                    },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(secondaryBtnBg, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Información",
+                        tint = if (isDarkTheme) secondaryIconColor else SteamAccentBlue,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                // 4. Like (❤️)
+                IconButton(
+                    onClick = {
+                        if (currentGame != null) {
+                            gameRepository?.saveLikedGame(currentGame.id) { success ->
+                                if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
+                            }
+                            history = history + currentGame
+                            gameList = gameList.drop(1)
+                            dragProgress = 0f
+                        }
+                    },
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(LikeColor, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "Like",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
     }

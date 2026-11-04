@@ -1,12 +1,14 @@
 package com.pamn.gamematch.ui.discover
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.repository.GameRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class DiscoverUiState(
     val searchQuery: String = "",
@@ -37,38 +39,42 @@ class DiscoverViewModel(
         loadData()
     }
 
-    /** Carga inicial del catálogo y los favoritos desde el repositorio. */
+    /** Carga inicial del catálogo desde Firestore y los favoritos desde el repositorio. */
     fun loadData() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        allGamesCatalog = repository.getAllGames()
+        viewModelScope.launch {
+            val catalogResult = repository.getGamesCatalog()
+            val catalog = catalogResult.getOrDefault(emptyList())
+            allGamesCatalog = catalog
 
-        val featured = repository.getFeaturedGames()
-        val trending = repository.getTrendingGames()
+            val featured = catalog.filter { it.isFeatured }
+            val trending = catalog.filter { it.isTrending }
 
-        repository.getLikedGames { result ->
-            result
-                .onSuccess { ids ->
-                    _uiState.update { state ->
-                        state.copy(
-                            featuredGames = featured,
-                            trendingGames = trending,
-                            likedGameIds = ids.toSet(),
-                            isLoading = false
-                        )
+            repository.getLikedGames { result ->
+                result
+                    .onSuccess { ids ->
+                        _uiState.update { state ->
+                            state.copy(
+                                featuredGames = featured,
+                                trendingGames = trending,
+                                likedGameIds = ids.toSet(),
+                                isLoading = false
+                            )
+                        }
+                        applyFilters()
                     }
-                    applyFilters()
-                }
-                .onFailure { error ->
-                    _uiState.update { state ->
-                        state.copy(
-                            featuredGames = featured,
-                            trendingGames = trending,
-                            isLoading = false,
-                            errorMessage = error.message ?: "Error al cargar favoritos"
-                        )
+                    .onFailure { error ->
+                        _uiState.update { state ->
+                            state.copy(
+                                featuredGames = featured,
+                                trendingGames = trending,
+                                isLoading = false,
+                                errorMessage = error.message ?: "Error al cargar favoritos"
+                            )
+                        }
+                        applyFilters()
                     }
-                    applyFilters()
-                }
+            }
         }
     }
 
@@ -144,7 +150,7 @@ class DiscoverViewModel(
                         platforms.any { sel -> sel.equals(p, ignoreCase = true) }
                     }
 
-            val matchesPrice = game.price <= maxPrice
+            val matchesPrice = (game.price ?: 0.0) <= maxPrice
 
             matchesQuery && matchesPlatform && matchesPrice
         }
