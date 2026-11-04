@@ -241,7 +241,7 @@ fun DiscoverScreen(
             // Carruseles horizontales (+ Destacado y + Trending)
             item {
                 Text(
-                    text = "+ Destacado 🔥",
+                    text = "+ Destacado",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -266,7 +266,7 @@ fun DiscoverScreen(
 
             item {
                 Text(
-                    text = "+ Trending 📈",
+                    text = "+ Trending",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
