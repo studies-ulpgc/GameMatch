@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.pamn.gamematch.data.model.Game
-import com.pamn.gamematch.ui.swipe.GameDetailModal
+import com.pamn.gamematch.ui.detail.GameDetailModal
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import com.pamn.gamematch.ui.theme.UnreleasedBadgeColor
 

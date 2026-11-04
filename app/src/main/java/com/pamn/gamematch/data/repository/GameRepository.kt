@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.pamn.gamematch.data.model.Game
+import com.pamn.gamematch.data.model.GameReview
 import com.pamn.gamematch.data.model.User
 
 class GameRepository {
@@ -188,6 +189,74 @@ class GameRepository {
 
         db.collection("users").document(currentUser.uid)
             .set(userModel, SetOptions.merge())
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    /**
+     * Consulta las reseñas de la colección raíz 'reviews' asociadas a un juego específico.
+     */
+    fun getReviewsForGame(gameId: String, onResult: (Result<List<GameReview>>) -> Unit) {
+        db.collection("reviews")
+            .whereEqualTo("gameId", gameId)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                val reviews = querySnapshot.documents.map { doc ->
+                    GameReview(
+                        id = doc.id,
+                        gameId = doc.getString("gameId") ?: "",
+                        gameTitle = doc.getString("gameTitle") ?: "",
+                        userId = doc.getString("userId") ?: "",
+                        userName = doc.getString("userName") ?: "Jugador",
+                        rating = (doc.getLong("rating") ?: 5L).toInt(),
+                        comment = doc.getString("comment") ?: "",
+                        timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
+                    )
+                }.sortedByDescending { it.timestamp }
+                onResult(Result.success(reviews))
+            }
+            .addOnFailureListener { onResult(Result.failure(it)) }
+    }
+
+    /**
+     * Añade una nueva reseña a la colección 'reviews'.
+     */
+    fun addReviewForGame(review: GameReview, onResult: (Boolean) -> Unit) {
+        val data = hashMapOf(
+            "gameId" to review.gameId,
+            "gameTitle" to review.gameTitle,
+            "userId" to review.userId,
+            "userName" to review.userName,
+            "rating" to review.rating,
+            "comment" to review.comment,
+            "timestamp" to review.timestamp
+        )
+
+        db.collection("reviews").add(data)
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    /**
+     * Actualiza una reseña existente en la colección 'reviews'.
+     */
+    fun updateReview(reviewId: String, rating: Int, comment: String, onResult: (Boolean) -> Unit) {
+        val updates = mapOf(
+            "rating" to rating,
+            "comment" to comment,
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        db.collection("reviews").document(reviewId).update(updates)
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    /**
+     * Elimina una reseña existente de la colección 'reviews'.
+     */
+    fun deleteReview(reviewId: String, onResult: (Boolean) -> Unit) {
+        db.collection("reviews").document(reviewId).delete()
             .addOnSuccessListener { onResult(true) }
             .addOnFailureListener { onResult(false) }
     }

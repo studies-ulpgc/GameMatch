@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.repository.GameRepository
+import com.pamn.gamematch.ui.detail.GameDetailModal
 import com.pamn.gamematch.ui.theme.LikeColor
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 

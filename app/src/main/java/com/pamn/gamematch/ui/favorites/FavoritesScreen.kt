@@ -45,8 +45,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pamn.gamematch.data.model.Game
+import com.pamn.gamematch.ui.detail.GameDetailModal
 import com.pamn.gamematch.ui.swipe.GameCard
-import com.pamn.gamematch.ui.swipe.GameDetailModal
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import kotlinx.coroutines.launch
 
