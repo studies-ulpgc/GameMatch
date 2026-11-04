@@ -43,7 +43,7 @@ fun SwipeScreen(
 
     var gameList by remember {
         mutableStateOf(
-            listOf(
+            gameRepository?.getAllGames() ?: listOf(
                 Game("1", "The Legend of Zelda", "Aventura épica de exploración e investigación en mundo abierto.", "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/header.jpg", "Aventura", 59.99, "Disponible", true),
                 Game("2", "GTA VI", "Siguiente entrega de la aclamada franquicia de acción en mundo abierto.", "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg", "Acción", 79.99, "Lanzamiento: Otoño 2026", false),
                 Game("3", "Hollow Knight: Silksong", "Explora el reino de Pharloom guiando a Hornet en una aventura 2D.", "https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg", "Indie", 19.99, "Por anunciar", false),

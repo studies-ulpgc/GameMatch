@@ -1,130 +1,223 @@
 package com.pamn.gamematch.ui.favorites
 
-import android.widget.Toast
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.pamn.gamematch.data.repository.GameRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pamn.gamematch.data.model.Game
+import com.pamn.gamematch.ui.swipe.GameCard
+import com.pamn.gamematch.ui.swipe.GameDetailModal
+import com.pamn.gamematch.ui.theme.SteamAccentBlue
+import kotlinx.coroutines.launch
 
 @Composable
 fun FavoritesScreen(
-    onNavigateToFullDetails: (String) -> Unit = {}
+    modifier: Modifier = Modifier,
+    onNavigateToFullDetails: (String) -> Unit = {},
+    viewModel: FavoritesViewModel = viewModel()
 ) {
-    val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-    val gameRepository = remember { GameRepository() }
-    val user = auth.currentUser
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    var selectedGameForModal by remember { mutableStateOf<Game?>(null) }
 
-    var likedGameIds by remember { mutableStateOf<List<String>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    // Cargar la lista de Likes desde Firestore
-    LaunchedEffect(user?.uid) {
-        user?.uid?.let { uid ->
-            db.collection("users").document(uid).get()
-                .addOnSuccessListener { document ->
-                    val list = document.get("likedGames") as? List<String>
-                    likedGameIds = list ?: emptyList()
-                    isLoading = false
-                }
-                .addOnFailureListener {
-                    isLoading = false
-                }
-        }
+    LaunchedEffect(Unit) {
+        viewModel.loadLikedGames()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Mis Favoritos ❤️",
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = "Mis Favoritos",
+                style = MaterialTheme.typography.headlineLarge,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            when (val state = uiState) {
+                FavoritesUiState.Loading -> CenteredBox {
+                    CircularProgressIndicator()
+                }
 
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (likedGameIds.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Aún no tienes juegos en tu lista de favoritos.",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(likedGameIds) { gameId ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Juego ID: $gameId",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            }
+                FavoritesUiState.Empty -> CenteredBox {
+                    Text(
+                        text = "Aún no tienes matches",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                }
 
-                            Row {
-                                // Boton Info (i) para ir a la vista de tu compañera
-                                IconButton(onClick = { onNavigateToFullDetails(gameId) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Detalles",
-                                        tint = MaterialTheme.colorScheme.primary
+                is FavoritesUiState.Error -> CenteredBox {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = state.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Button(
+                            onClick = viewModel::loadLikedGames,
+                            modifier = Modifier.padding(top = 12.dp)
+                        ) { Text("Reintentar") }
+                    }
+                }
+
+                is FavoritesUiState.Success -> LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(state.games, key = { it.id }) { game ->
+                        FavoriteGameGridCard(
+                            game = game,
+                            onShowInfo = { selectedGameForModal = game },
+                            onRemove = {
+                                viewModel.removeFavorite(game.id)
+                                coroutineScope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = "\"${game.title}\" eliminado de favoritos",
+                                        actionLabel = "Deshacer",
+                                        duration = SnackbarDuration.Short
                                     )
-                                }
-
-                                // Boton Quitar de Favoritos (X / Eliminar)
-                                IconButton(
-                                    onClick = {
-                                        gameRepository.removeLikedGame(gameId) { success ->
-                                            if (success) {
-                                                likedGameIds = likedGameIds.filter { it != gameId }
-                                                Toast.makeText(context, "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.addFavorite(game)
                                     }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Eliminar",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
                                 }
                             }
-                        }
+                        )
                     }
                 }
             }
         }
     }
+
+    selectedGameForModal?.let { game ->
+        GameDetailModal(
+            game = game,
+            onDismiss = { selectedGameForModal = null },
+            onNavigateToFullDetails = { gameId ->
+                selectedGameForModal = null
+                onNavigateToFullDetails(gameId)
+            }
+        )
+    }
+}
+
+/** Tarjeta que reutiliza GameCard dentro de la cuadrícula con botones de Info y Quitar Favorito. */
+@Composable
+private fun FavoriteGameGridCard(
+    game: Game,
+    onShowInfo: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.7f)
+            .clip(RoundedCornerShape(16.dp))
+    ) {
+        GameCard(
+            game = game,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Botón Info (ℹ️) - literal el mismo componente de Swipe
+            IconButton(
+                onClick = onShowInfo,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Información",
+                    tint = SteamAccentBlue,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Botón Favorito (❤️) - quitar de favoritos
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = "Quitar de favoritos",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CenteredBox(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) { content() }
 }
