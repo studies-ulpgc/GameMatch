@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.update
 
 data class DiscoverUiState(
     val searchQuery: String = "",
-    val selectedPlatform: String = "Todas",
+    val selectedPlatforms: Set<String> = setOf("Todas"),
     val maxPrice: Double = 100.0,
     val featuredGames: List<Game> = emptyList(),
     val trendingGames: List<Game> = emptyList(),
@@ -21,7 +21,7 @@ data class DiscoverUiState(
 ) {
     /** Indica si hay algún filtro o búsqueda activo para cambiar de carruseles a resultados filtrados. */
     val isFilteringActive: Boolean
-        get() = searchQuery.isNotBlank() || selectedPlatform != "Todas" || maxPrice < 100.0
+        get() = searchQuery.isNotBlank() || !selectedPlatforms.contains("Todas") || maxPrice < 100.0
 }
 
 class DiscoverViewModel(
@@ -77,8 +77,27 @@ class DiscoverViewModel(
         applyFilters()
     }
 
+    /** Permite selección múltiple de plataformas o seleccionar 'Todas' para limpiar seleccionadas. */
     fun onPlatformSelected(platform: String) {
-        _uiState.update { it.copy(selectedPlatform = platform) }
+        _uiState.update { state ->
+            val current = state.selectedPlatforms
+            val updated = if (platform == "Todas") {
+                setOf("Todas")
+            } else {
+                val withoutAll = current - "Todas"
+                val toggled = if (withoutAll.contains(platform)) {
+                    withoutAll - platform
+                } else {
+                    withoutAll + platform
+                }
+                if (toggled.isEmpty()) {
+                    setOf("Todas")
+                } else {
+                    toggled
+                }
+            }
+            state.copy(selectedPlatforms = updated)
+        }
         applyFilters()
     }
 
@@ -112,7 +131,7 @@ class DiscoverViewModel(
     private fun applyFilters() {
         val state = _uiState.value
         val query = state.searchQuery.trim()
-        val platform = state.selectedPlatform
+        val platforms = state.selectedPlatforms
         val maxPrice = state.maxPrice
 
         val filtered = allGamesCatalog.filter { game ->
@@ -120,8 +139,10 @@ class DiscoverViewModel(
                     game.title.contains(query, ignoreCase = true) ||
                     game.genre.contains(query, ignoreCase = true)
 
-            val matchesPlatform = platform == "Todas" ||
-                    game.platforms.any { it.equals(platform, ignoreCase = true) }
+            val matchesPlatform = platforms.contains("Todas") ||
+                    game.platforms.any { p ->
+                        platforms.any { sel -> sel.equals(p, ignoreCase = true) }
+                    }
 
             val matchesPrice = game.price <= maxPrice
 
