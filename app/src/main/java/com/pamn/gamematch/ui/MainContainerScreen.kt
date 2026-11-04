@@ -5,9 +5,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import com.pamn.gamematch.ui.discover.DiscoverScreen
 import com.pamn.gamematch.ui.favorites.FavoritesScreen
 import com.pamn.gamematch.ui.profile.ProfileScreen
 import com.pamn.gamematch.ui.swipe.SwipeScreen
@@ -44,13 +46,20 @@ fun MainContainerScreen(
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Favorite, contentDescription = "Favoritos") },
-                    label = { Text("Favoritos") },
+                    icon = { Icon(Icons.Default.Search, contentDescription = "Descubrir") },
+                    label = { Text("Descubrir") },
                     colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Default.Favorite, contentDescription = "Favoritos") },
+                    label = { Text("Favoritos") },
+                    colors = navItemColors
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
                     icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
                     label = { Text("Perfil") },
                     colors = navItemColors
@@ -64,10 +73,11 @@ fun MainContainerScreen(
         ) {
             when (selectedTab) {
                 0 -> SwipeScreen(
-                    onNavigateToProfile = { selectedTab = 2 }
+                    onNavigateToProfile = { selectedTab = 3 }
                 )
-                1 -> FavoritesScreen()
-                2 -> ProfileScreen(
+                1 -> DiscoverScreen()
+                2 -> FavoritesScreen()
+                3 -> ProfileScreen(
                     onLogout = onLogout,
                     isDarkModeGlobal = isDarkMode,
                     onToggleDarkModeGlobal = onToggleDarkMode

@@ -50,9 +50,9 @@ fun GameCard(
                 detectHorizontalDragGestures(
                     onDragEnd = {
                         if (offsetX > 120f) {
-                            onSwipeLeft()
-                        } else if (offsetX < -120f) {
                             onSwipeRight()
+                        } else if (offsetX < -120f) {
+                            onSwipeLeft()
                         }
                         offsetX = 0f
                         onDragProgress(0f)
