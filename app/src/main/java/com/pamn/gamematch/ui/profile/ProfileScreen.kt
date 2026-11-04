@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.pamn.gamematch.BuildConfig
 import com.pamn.gamematch.data.model.User
 import com.pamn.gamematch.data.repository.AuthRepository
 import com.pamn.gamematch.data.repository.GameRepository
@@ -30,6 +31,7 @@ import com.pamn.gamematch.ui.auth.AuthViewModel
 import com.pamn.gamematch.ui.components.AvatarSelectionDialog
 import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -47,6 +49,8 @@ fun ProfileScreen(
         val gameRepository = remember { GameRepository() }
         val authRepository = remember { AuthRepository() }
         val user = auth.currentUser
+        val coroutineScope = rememberCoroutineScope()
+        var isSyncingRawg by remember { mutableStateOf(false) }
 
         val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
         val minValidYear = currentYear - 120
@@ -521,6 +525,60 @@ fun ProfileScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text("Eliminar Cuenta")
+                            }
+                        }
+                    }
+
+                    if (BuildConfig.DEBUG) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Herramientas de Desarrollador",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Sincroniza el catálogo de RAWG API hacia Cloud Firestore.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        isSyncingRawg = true
+                                        coroutineScope.launch {
+                                            val result = gameRepository.syncCatalogFromRawg()
+                                            isSyncingRawg = false
+                                            result
+                                                .onSuccess { count ->
+                                                    Toast.makeText(context, "¡Éxito! Sincronizados $count juegos con RAWG.", Toast.LENGTH_LONG).show()
+                                                }
+                                                .onFailure { error ->
+                                                    Toast.makeText(context, "Error: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                                                }
+                                        }
+                                    },
+                                    enabled = !isSyncingRawg,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    if (isSyncingRawg) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Sincronizando...")
+                                    } else {
+                                        Text("Sincronizar catálogo con RAWG (Admin)")
+                                    }
+                                }
                             }
                         }
                     }

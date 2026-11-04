@@ -1,11 +1,13 @@
 package com.pamn.gamematch.ui.favorites
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.repository.GameRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /** Estados posibles de la pantalla de Favoritos. */
 sealed interface FavoritesUiState {
@@ -26,24 +28,28 @@ class FavoritesViewModel(
         loadLikedGames()
     }
 
-    /** Carga los juegos favoritos cruzando los IDs de Firestore con el catálogo general. */
+    /** Carga los juegos favoritos cruzando los IDs de Firestore con el catálogo general de Firestore. */
     fun loadLikedGames() {
         _uiState.value = FavoritesUiState.Loading
-        repository.getLikedGames { result ->
-            result
-                .onSuccess { ids ->
-                    val catalog = repository.getAllGames()
-                    val likedGames = ids.mapNotNull { id ->
-                        catalog.find { game -> game.id == id }
+        viewModelScope.launch {
+            val catalogResult = repository.getGamesCatalog()
+            val catalog = catalogResult.getOrDefault(emptyList())
+
+            repository.getLikedGames { result ->
+                result
+                    .onSuccess { ids ->
+                        val likedGames = ids.mapNotNull { id ->
+                            catalog.find { game -> game.id == id }
+                        }
+                        _uiState.value =
+                            if (likedGames.isEmpty()) FavoritesUiState.Empty
+                            else FavoritesUiState.Success(likedGames)
                     }
-                    _uiState.value =
-                        if (likedGames.isEmpty()) FavoritesUiState.Empty
-                        else FavoritesUiState.Success(likedGames)
-                }
-                .onFailure {
-                    _uiState.value =
-                        FavoritesUiState.Error(it.message ?: "No se pudieron cargar tus matches")
-                }
+                    .onFailure {
+                        _uiState.value =
+                            FavoritesUiState.Error(it.message ?: "No se pudieron cargar tus matches")
+                    }
+            }
         }
     }
 

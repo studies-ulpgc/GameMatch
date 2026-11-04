@@ -69,19 +69,23 @@ class CommunityViewModel(
     }
 
     fun loadCatalogGames() {
-        val games = gameRepository.getAllGames()
-        _uiState.update { it.copy(catalogGames = games) }
+        viewModelScope.launch {
+            val games = gameRepository.getGamesCatalog().getOrDefault(emptyList())
+            _uiState.update { it.copy(catalogGames = games) }
+        }
     }
 
     fun loadLikedGames() {
-        gameRepository.getLikedGames { result ->
-            result.onSuccess { ids ->
-                val catalog = gameRepository.getAllGames()
-                val likedTitles = ids.mapNotNull { id ->
-                    catalog.find { game -> game.id == id }?.title
-                }.toSet()
-                _uiState.update { it.copy(likedGameTitles = likedTitles) }
-                applyRoomFilters()
+        viewModelScope.launch {
+            val catalog = gameRepository.getGamesCatalog().getOrDefault(emptyList())
+            gameRepository.getLikedGames { result ->
+                result.onSuccess { ids ->
+                    val likedTitles = ids.mapNotNull { id ->
+                        catalog.find { game -> game.id == id }?.title
+                    }.toSet()
+                    _uiState.update { it.copy(likedGameTitles = likedTitles) }
+                    applyRoomFilters()
+                }
             }
         }
     }

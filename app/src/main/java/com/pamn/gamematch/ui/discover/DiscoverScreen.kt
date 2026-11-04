@@ -377,7 +377,7 @@ fun DiscoverGameCard(
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = if (game.price == 0.0) "Gratis" else "${game.price} €",
+                            text = if (game.price == null || game.price == 0.0) "Gratis" else "${game.price} €",
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Black

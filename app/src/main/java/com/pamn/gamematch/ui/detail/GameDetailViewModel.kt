@@ -1,6 +1,7 @@
 package com.pamn.gamematch.ui.detail
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.pamn.gamematch.data.model.GameReview
 import com.pamn.gamematch.data.repository.GameRepository
@@ -8,12 +9,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class GameDetailUiState(
     val gameId: String = "",
     val reviews: List<GameReview> = emptyList(),
     val userReview: GameReview? = null,
     val averageRating: Double = 0.0,
+    val priceDisplay: String? = null,
+    val isPriceLoading: Boolean = false,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
@@ -27,6 +31,32 @@ class GameDetailViewModel(
 
     private val _uiState = MutableStateFlow(GameDetailUiState())
     val uiState: StateFlow<GameDetailUiState> = _uiState.asStateFlow()
+
+    /** Consulta asíncrona bajo demanda del precio en Steam. */
+    fun loadSteamPrice(steamAppId: Int?, defaultPrice: Double?) {
+        if (steamAppId != null) {
+            _uiState.update { it.copy(isPriceLoading = true, priceDisplay = null) }
+            viewModelScope.launch {
+                val result = gameRepository.getSteamPrice(steamAppId)
+                result
+                    .onSuccess { price ->
+                        val formatted = price ?: if (defaultPrice != null && defaultPrice > 0.0) "$defaultPrice €" else if (defaultPrice == 0.0) "Gratis" else "Consultar en tienda"
+                        _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
+                    }
+                    .onFailure {
+                        val fallback = if (defaultPrice != null && defaultPrice > 0.0) "$defaultPrice €" else if (defaultPrice == 0.0) "Gratis" else "Consultar en tienda"
+                        _uiState.update { it.copy(priceDisplay = fallback, isPriceLoading = false) }
+                    }
+            }
+        } else {
+            val formatted = when {
+                defaultPrice != null && defaultPrice > 0.0 -> "$defaultPrice €"
+                defaultPrice == 0.0 -> "Gratis"
+                else -> "Precio no disponible"
+            }
+            _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
+        }
+    }
 
     /** Carga las reseñas asociadas al juego garantizando el aislamiento por usuario autenticado. */
     fun loadReviewsForGame(gameId: String) {

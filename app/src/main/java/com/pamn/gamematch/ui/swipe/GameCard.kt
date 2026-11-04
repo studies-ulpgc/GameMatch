@@ -146,7 +146,7 @@ fun GameCard(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = "${game.price} €",
+                            text = if (game.price == null) "Consultar" else if (game.price == 0.0) "Gratis" else "${game.price} €",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Black
