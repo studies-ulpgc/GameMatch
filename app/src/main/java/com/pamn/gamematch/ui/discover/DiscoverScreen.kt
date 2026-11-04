@@ -126,14 +126,14 @@ fun DiscoverScreen(
             )
         }
 
-        // 2. Filtros de Plataformas (Chips)
+        // 2. Filtros de Plataformas (Chips) con selección múltiple
         item {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(PLATFORM_OPTIONS) { platform ->
-                    val isSelected = uiState.selectedPlatform.equals(platform, ignoreCase = true)
+                    val isSelected = uiState.selectedPlatforms.contains(platform)
                     FilterChip(
                         selected = isSelected,
                         onClick = { viewModel.onPlatformSelected(platform) },
