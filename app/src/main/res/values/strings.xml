@@ -1,3 +1,263 @@
 <resources>
     <string name="app_name">GameMatch</string>
+
+    <!-- Navegación -->
+    <string name="nav_discover">Descubrir</string>
+    <string name="nav_swipe">Swipe</string>
+    <string name="nav_favorites">Favoritos</string>
+    <string name="nav_community">Comunidad</string>
+    <string name="nav_profile">Perfil</string>
+
+    <!-- Login & Signup -->
+    <string name="login_title">Iniciar Sesión</string>
+    <string name="login_email">Correo electrónico</string>
+    <string name="login_password">Contraseña</string>
+    <string name="login_no_account">¿No tienes cuenta? Regístrate</string>
+    <string name="login_email_required">El correo es obligatorio</string>
+    <string name="login_email_invalid">Introduce un correo válido</string>
+    <string name="login_password_required">La contraseña es obligatoria</string>
+
+    <string name="signup_title">Crear Cuenta</string>
+    <string name="signup_email_invalid">Correo inválido</string>
+    <string name="signup_password_invalid">Mínimo 6 caracteres</string>
+    <string name="signup_confirm_password">Confirmar contraseña</string>
+    <string name="signup_confirm_password_invalid">Las contraseñas no coinciden</string>
+    <string name="signup_already_account">¿Ya tienes cuenta? Inicia sesión</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">¡Bienvenido a GameMatch!</string>
+    <string name="onboarding_subtitle">Configura tu experiencia inicial</string>
+    <string name="onboarding_language">Idioma</string>
+    <string name="onboarding_dark_mode">Modo Oscuro</string>
+    <string name="onboarding_continue">Comenzar a Explorar</string>
+    <string name="onboarding_username_label">Nombre de usuario *</string>
+    <string name="onboarding_username_error">El nombre de usuario es obligatorio</string>
+    <string name="onboarding_birthyear_label">Año de Nacimiento (Ej. 2002) *</string>
+    <string name="onboarding_birthyear_error_out_of_range">Año de nacimiento fuera de rango</string>
+    <string name="onboarding_birthyear_error_required">El año de nacimiento es obligatorio</string>
+    <string name="onboarding_price_range">Rango de precio:</string>
+    <string name="onboarding_released_only_title">Solo juegos ya estrenados</string>
+    <string name="onboarding_released_only_desc_on">No se mostrarán próximos lanzamientos</string>
+    <string name="onboarding_released_only_desc_off">Se incluirán juegos aún no lanzados</string>
+    <string name="onboarding_genres_title">Géneros Preferidos (Opcional)</string>
+    <string name="onboarding_error_incomplete">Por favor, completa tu nombre y año de nacimiento</string>
+    <string name="onboarding_error_save">Error al guardar el perfil</string>
+    <string name="onboarding_appearance">Preferencia de Apariencia</string>
+
+    <!-- Profile -->
+    <string name="profile_language">Idioma</string>
+    <string name="profile_dark_mode">Modo Oscuro</string>
+    <string name="profile_title">Mi Perfil</string>
+    <string name="profile_settings">Ajustes de la Aplicación</string>
+    <string name="profile_personal_info">Información Personal</string>
+    <string name="profile_username">Usuario</string>
+    <string name="profile_email">Correo</string>
+    <string name="profile_password">Contraseña</string>
+    <string name="profile_birthyear">Año de Nacimiento</string>
+    <string name="profile_game_prefs">Preferencias de Juego</string>
+    <string name="profile_price_range">Rango de Precio</string>
+    <string name="profile_released_only">Solo Estrenados</string>
+    <string name="profile_genres">Géneros Favoritos</string>
+    <string name="profile_unspecified">Sin especificar</string>
+    <string name="profile_not_available">No disponible</string>
+    <string name="profile_yes">Sí</string>
+    <string name="profile_no_upcoming">No (Incluye próximos)</string>
+    <string name="profile_all">Todos</string>
+    <string name="profile_save_changes">Guardar Cambios</string>
+    <string name="profile_account_options">Opciones de Cuenta</string>
+    <string name="profile_change_password">Cambiar Contraseña</string>
+    <string name="profile_delete_account">Eliminar Cuenta</string>
+    <string name="profile_logout">Cerrar Sesión</string>
+    <string name="profile_dev_tools">Herramientas de Desarrollador</string>
+    <string name="profile_dev_sync_desc">Sincroniza el catálogo de RAWG API hacia Cloud Firestore.</string>
+    <string name="profile_dev_syncing">Sincronizando...</string>
+    <string name="profile_dev_sync_btn">Sincronizar catálogo con RAWG (Admin)</string>
+
+    <!-- Discover -->
+    <string name="discover_title">Descubrir</string>
+    <string name="discover_search_hint">Buscar juego o género…</string>
+    <string name="discover_search_clear">Limpiar búsqueda</string>
+    <string name="discover_platform_all">Todas</string>
+    <string name="discover_price_max">Precio máx:</string>
+    <string name="discover_price_any">Cualquiera</string>
+    <string name="discover_results">Resultados (%1$d)</string>
+    <string name="discover_section_featured">+ Destacado</string>
+    <string name="discover_section_upcoming">Próximos Lanzamientos</string>
+    <string name="discover_section_trending">+ Trending</string>
+    <string name="discover_section_all">Todos los Juegos</string>
+    <string name="discover_empty">No se encontraron juegos con estos filtros.</string>
+    <!-- Favorites -->
+    <string name="favorites_title">Mis Favoritos</string>
+    <string name="favorites_empty">Aún no tienes matches</string>
+    <string name="favorites_retry">Reintentar</string>
+    <string name="favorites_removed_msg">\"%1$s\" eliminado de favoritos</string>
+    <string name="favorites_undo">Deshacer</string>
+    <string name="favorites_info">Información</string>
+    <string name="favorites_remove">Quitar de favoritos</string>
+
+    <!-- Game Card & Detail -->
+    <string name="game_status_upcoming">Próximamente</string>
+    <string name="game_price_check">Consultar</string>
+    <string name="game_price_free">Gratis</string>
+    <string name="game_price_format">%1$s €</string>
+
+    <!-- Game Detail Modal -->
+    <string name="detail_genre">Género: %1$s</string>
+    <string name="detail_steam_badge">Steam 🛒</string>
+    <string name="detail_steam_button">Ver ficha oficial en Steam 🛒</string>
+    <string name="detail_no_reviews">Sin reseñas aún</string>
+    <string name="detail_your_review">Tu Reseña</string>
+    <string name="detail_edit_review">Editar reseña</string>
+    <string name="detail_delete_review">Eliminar reseña</string>
+    <string name="detail_review_hint">Escribe tu opinión sobre el juego...</string>
+    <string name="detail_cancel">Cancelar</string>
+    <string name="detail_save_changes">Guardar Cambios</string>
+    <string name="detail_publish_review">Publicar Reseña</string>
+
+    <!-- Community -->
+    <string name="community_title">Comunidad</string>
+    <string name="community_fab_create">Crear sala de juego</string>
+    <string name="community_tab_rooms">Salas de Juego</string>
+    <string name="community_tab_rooms_icon">Salas</string>
+    <string name="community_tab_my_rooms">Mis Salas</string>
+    <string name="community_tab_players">Jugadores Afines</string>
+    <string name="community_tab_players_icon">Jugadores</string>
+    <string name="community_contact_copied">Contacto copiado al portapapeles: %1$s</string>
+    <string name="community_filter_all">Todas</string>
+    <string name="community_filter_following">Solo Seguidos</string>
+    <string name="community_filter_favorites">Mis Favoritos</string>
+    <string name="community_room_host">Anfitrión: %1$s</string>
+    <string name="community_room_view_members">Ver Miembros</string>
+    <string name="community_user_followed">Seguido</string>
+    <string name="community_user_unfollowed">Dejar de Seguir</string>
+    <string name="community_user_follow">Seguir</string>
+    <string name="community_action_edit">Editar</string>
+    <string name="community_room_followers_only">Seguidos</string>
+    <string name="community_room_view_members_count">Ver Miembros (%1$d)</string>
+    <string name="community_room_edit">Editar sala</string>
+    <string name="community_room_delete">Eliminar sala</string>
+    <string name="community_room_members_title">Miembros de \'%1$s\'</string>
+    <string name="community_room_members_empty">No hay miembros unidos a la sala todavía.</string>
+    <string name="community_empty_following">No hay salas activas de usuarios que sigues.</string>
+    <string name="community_empty_favorites">No hay salas activas para tus juegos favoritos.</string>
+    <string name="community_empty_search">No se encontraron salas para \'%1$s\'.</string>
+    <string name="community_empty_all">Aún no hay salas de juego activas. ¡Crea la primera!</string>
+    <string name="community_retry">Reintentar</string>
+    <string name="community_room_full">Sala llena</string>
+    <string name="community_room_join">Unirse a la sala</string>
+    <string name="community_room_leave">Salir de la sala</string>
+    <string name="community_empty_users">No se encontraron otros jugadores todavía.</string>
+    <string name="community_user_language">Idioma: %1$s</string>
+    <string name="community_user_following">Siguiendo</string>
+    <string name="community_user_affinity">%1$d%% de afinidad contigo</string>
+    <string name="community_user_birthyear">Año de nacimiento: %1$s</string>
+    <string name="community_user_preferred_genres">Géneros favoritos:</string>
+    <string name="community_user_default_name">Perfil de Jugador</string>
+    <string name="community_user_follow_user">Seguir usuario ➕</string>
+    <string name="community_close">Cerrar</string>
+    <string name="community_cancel">Cancelar</string>
+    <string name="community_delete">Eliminar</string>
+    <string name="community_delete_room_title">Eliminar Sala</string>
+    <string name="community_delete_room_confirm">¿Estás seguro de que deseas eliminar la sala de \'%1$s\'?</string>
+    <string name="community_my_rooms_empty">No has creado ninguna sala aún. ¡Crea una para reunir a tu equipo!</string>
+    <string name="community_create_room_btn">Crear sala</string>
+    <string name="community_reload">Recargar</string>
+    <string name="community_host_you">Anfitrión (Tú)</string>
+    <string name="community_kick_member">Expulsar miembro</string>
+    <string name="community_search_placeholder">Buscar sala por juego o descripción...</string>
+    <string name="community_search_cd">Buscar sala</string>
+    <string name="community_clear_search_cd">Limpiar búsqueda</string>
+    <string name="community_contact_btn">Contacto</string>
+    <string name="community_contact_copy_cd">Copiar contacto</string>
+    <string name="community_create_room_title">Crear Sala de Juego (LFG)</string>
+    <string name="community_edit_room_title">Editar Sala de Juego</string>
+    <string name="community_game_title_label">Título del juego:</string>
+    <string name="community_game_title_placeholder">Ej. GTA VI / Elden Ring</string>
+    <string name="community_platform_label">Plataforma:</string>
+    <string name="community_desc_label">Descripción de la partida</string>
+    <string name="community_desc_placeholder">Ej. Busco 2 jugadores para coop hoy</string>
+    <string name="community_contact_label">Contacto (Discord, Gamertag, etc.)</string>
+    <string name="community_contact_placeholder">Ej. gamer#1234</string>
+    <string name="community_followers_only_switch">¿Solo para seguidos?</string>
+    <string name="community_max_players_label">Máx. Jugadores:</string>
+    <string name="community_publish_room_btn">Publicar Sala</string>
+    <string name="community_save_changes_btn">Guardar Cambios</string>
+    <string name="community_user_follow_success">¡Ahora sigues a este usuario!</string>
+    <string name="community_user_unfollow_success">Has dejado de seguir a este usuario</string>
+
+    <!-- Genres -->
+    <string name="genre_action">Acción</string>
+    <string name="genre_adventure">Aventura</string>
+    <string name="genre_rpg">RPG</string>
+    <string name="genre_indie">Indie</string>
+    <string name="genre_strategy">Estrategia</string>
+    <string name="genre_sports">Deportes</string>
+    <string name="genre_horror">Terror</string>
+
+    <!-- Profile Edit & Dialogs -->
+    <string name="profile_username_label">Nombre de usuario *</string>
+    <string name="profile_username_required">El nombre de usuario es obligatorio</string>
+    <string name="profile_birthyear_label">Año de Nacimiento (%1$d - %2$d) *</string>
+    <string name="profile_birthyear_out_of_range">Año fuera de rango (%1$d - %2$d)</string>
+    <string name="profile_birthyear_required">El año de nacimiento es obligatorio</string>
+    <string name="profile_price_range_format">Rango de precio: %1$d € - %2$d €</string>
+    <string name="profile_released_only_title">Solo juegos ya estrenados</string>
+    <string name="profile_released_only_desc_on">Ocultar juegos en desarrollo/próximos</string>
+    <string name="profile_released_only_desc_off">Mostrar también juegos no lanzados</string>
+    <string name="profile_error_incomplete">Completa los campos obligatorios</string>
+    <string name="profile_error_invalid_year">Año inválido (%1$d - %2$d)</string>
+    <string name="profile_updated_success">Perfil actualizado</string>
+    <string name="profile_new_password_label">Nueva contraseña (mín. 6 caracteres)</string>
+    <string name="profile_toggle_password_cd">Mostrar/ocultar contraseña</string>
+    <string name="profile_password_min_chars">Debe tener al menos 6 caracteres</string>
+    <string name="profile_confirm_password_required">Confirma tu contraseña</string>
+    <string name="profile_password_updated_success">Contraseña actualizada correctamente</string>
+    <string name="profile_password_update_error">Error al actualizar contraseña</string>
+    <string name="profile_delete_account_dialog_title">¿Eliminar Cuenta?</string>
+    <string name="profile_delete_account_dialog_desc">Esta acción es permanente y eliminará todos tus favoritos y preferencias de Firebase.</string>
+    <string name="profile_confirm_delete">Confirmar Borrado</string>
+    <string name="profile_account_deleted">Cuenta eliminada</string>
+
+    <!-- Community Messages & Modals -->
+    <string name="community_expand_games_cd">Desplegar juegos</string>
+    <string name="community_expand_platforms_cd">Desplegar plataformas</string>
+    <string name="community_joined_room_success">¡Te has unido a la sala!</string>
+    <string name="community_left_room_success">Has salido de la sala</string>
+    <string name="community_member_removed_success">Miembro expulsado de la sala con éxito</string>
+    <string name="community_fields_required_error">Por favor, completa todos los campos requeridos</string>
+    <string name="community_room_created_success">¡Sala creada con éxito!</string>
+    <string name="community_room_updated_success">¡Sala actualizada con éxito!</string>
+    <string name="community_room_deleted_success">¡Sala eliminada con éxito!</string>
+    <string name="community_load_users_error">Error al cargar los usuarios</string>
+    <string name="community_load_rooms_error">Error al cargar las salas</string>
+    <string name="community_follow_error">Error al actualizar seguimiento</string>
+    <string name="community_join_room_error">Error al unirse a la sala</string>
+    <string name="community_leave_room_error">Error al salir de la sala</string>
+    <string name="community_remove_member_error">Error al expulsar al miembro</string>
+    <string name="community_create_room_error">Error al crear la sala</string>
+    <string name="community_update_room_error">Error al actualizar la sala</string>
+    <string name="community_delete_room_error">Error al eliminar la sala</string>
+
+    <!-- Swipe -->
+    <string name="swipe_empty_title">No hay juegos disponibles en el catálogo.</string>
+    <string name="swipe_empty_subtitle">Sincroniza el catálogo desde tu perfil (Admin).</string>
+    <string name="swipe_saved_favorites">¡Guardado en favoritos!</string>
+    <string name="swipe_undo_success">Deshecho y eliminado de favoritos</string>
+    <string name="swipe_undo_empty">No hay historial para deshacer</string>
+    <string name="swipe_cd_dislike">Dislike</string>
+    <string name="swipe_cd_undo">Deshacer</string>
+    <string name="swipe_cd_info">Información</string>
+    <string name="swipe_cd_like">Like</string>
+
+    <!-- Auth Errors -->
+    <string name="auth_error_user_not_found">No existe ninguna cuenta registrada con este correo (%1$s). ¡Regístrate primero en \"Crear Cuenta\"!</string>
+    <string name="auth_error_invalid_credentials">Correo o contraseña incorrectos</string>
+    <string name="auth_error_email_already_in_use">Este correo electrónico ya está registrado</string>
+    <string name="auth_error_network">Error de conexión. Comprueba tu acceso a internet</string>
+    <string name="auth_error_too_many_requests">Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos</string>
+    <string name="auth_error_generic">Error al iniciar sesión. Comprueba tus datos</string>
+    <string name="auth_error_fill_all_fields">Por favor, completa todos los campos</string>
+    <string name="auth_error_invalid_email_format">Introduce un correo electrónico válido (ej. usuario@gmail.com)</string>
+    <string name="auth_error_password_length">La contraseña debe tener al menos 6 caracteres</string>
+    <string name="auth_error_passwords_dont_match">Las contraseñas no coinciden</string>
 </resources>

@@ -75,7 +75,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "GameMatch",
+                    text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
@@ -97,7 +97,7 @@ fun LoginScreen(
                         email = it
                         viewModel.clearError()
                     },
-                    label = { Text("Correo electrónico") },
+                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email)) },
                     leadingIcon = {
                         Icon(Icons.Default.Email, contentDescription = null)
                     },
@@ -123,8 +123,8 @@ fun LoginScreen(
                     supportingText = {
                         if (emailTouched) {
                             when {
-                                email.isBlank() -> Text("El correo es obligatorio", color = SoftErrorColor)
-                                !isEmailValid -> Text("Introduce un correo válido", color = SoftErrorColor)
+                                email.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email_required), color = SoftErrorColor)
+                                !isEmailValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -148,7 +148,7 @@ fun LoginScreen(
                         password = it
                         viewModel.clearError()
                     },
-                    label = { Text("Contraseña") },
+                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password)) },
                     leadingIcon = {
                         Icon(Icons.Default.Lock, contentDescription = null)
                     },
@@ -185,7 +185,7 @@ fun LoginScreen(
                     isError = passwordTouched && password.isBlank(),
                     supportingText = {
                         if (passwordTouched && password.isBlank()) {
-                            Text("La contraseña es obligatoria", color = SoftErrorColor)
+                            Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password_required), color = SoftErrorColor)
                         }
                     },
                     modifier = Modifier
@@ -203,9 +203,10 @@ fun LoginScreen(
 
                 viewModel.errorMessage?.let { error ->
                     Text(
-                        text = error,
+                        text = error.asString(),
                         color = SoftErrorColor,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -230,14 +231,14 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .height(50.dp)
                     ) {
-                        Text("Iniciar Sesión", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 TextButton(onClick = onNavigateToSignUp) {
-                    Text("¿No tienes cuenta? Regístrate", color = SteamAccentBlue)
+                    Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_no_account), color = SteamAccentBlue)
                 }
             }
         }

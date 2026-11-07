@@ -11,24 +11,24 @@ class AuthRepository {
     val currentUser: FirebaseUser?
         get() = auth.currentUser
 
-    fun login(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+    fun login(email: String, pass: String, onResult: (Boolean, Exception?) -> Unit) {
         auth.signInWithEmailAndPassword(email, pass)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     onResult(true, null)
                 } else {
-                    onResult(false, task.exception?.localizedMessage)
+                    onResult(false, task.exception)
                 }
             }
     }
 
-    fun signUp(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+    fun signUp(email: String, pass: String, onResult: (Boolean, Exception?) -> Unit) {
         auth.createUserWithEmailAndPassword(email, pass)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     onResult(true, null)
                 } else {
-                    onResult(false, task.exception?.localizedMessage)
+                    onResult(false, task.exception)
                 }
             }
     }

@@ -28,7 +28,9 @@ import com.pamn.gamematch.data.model.User
 fun OnboardingScreen(
     onOnboardingComplete: () -> Unit,
     isDarkMode: Boolean = true,
-    onToggleDarkMode: (Boolean) -> Unit = {}
+    onToggleDarkMode: (Boolean) -> Unit = {},
+    currentLanguage: String = "es",
+    onChangeLanguage: (String) -> Unit = {}
 ) {
     GameMatchTheme(darkTheme = isDarkMode) {
         val context = LocalContext.current
@@ -44,7 +46,6 @@ fun OnboardingScreen(
         var isUsernameFocused by remember { mutableStateOf(false) }
 
         var priceRange by remember { mutableStateOf(0f..70f) }
-        var selectedLanguage by remember { mutableStateOf("Español") }
 
         var usernameTouched by remember { mutableStateOf(false) }
         var usernameHasFocused by remember { mutableStateOf(false) }
@@ -71,7 +72,7 @@ fun OnboardingScreen(
                 }
             }
         }
-        val availableGenres = listOf("Acción", "Aventura", "RPG", "Indie", "Estrategia", "Deportes", "Terror")
+        val availableGenres = com.pamn.gamematch.utils.GenreUtils.ALL_GENRES
 
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -89,13 +90,13 @@ fun OnboardingScreen(
 
                 // Encabezado
                 Text(
-                    text = "Bienvenido a GameMatch",
+                    text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Configura tu experiencia inicial",
+                    text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -119,7 +120,7 @@ fun OnboardingScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Preferencia de Apariencia",
+                            text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_appearance),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -136,14 +137,14 @@ fun OnboardingScreen(
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Modo Oscuro")
+                                Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_dark_mode))
                             }
                             Switch(
                                 checked = isDarkMode,
                                 onCheckedChange = { onToggleDarkMode(it) }
                             )
                         }
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(vertical = 8.dp),
                             color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
                         )
@@ -159,12 +160,15 @@ fun OnboardingScreen(
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Idioma")
+                                Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_language))
                             }
                             FilterChip(
                                 selected = true,
-                                onClick = { selectedLanguage = if (selectedLanguage == "Español") "English" else "Español" },
-                                label = { Text(selectedLanguage) },
+                                onClick = { 
+                                    val newLangCode = if (currentLanguage == "es") "en" else "es"
+                                    onChangeLanguage(newLangCode)
+                                },
+                                label = { Text(if (currentLanguage == "es") "Español" else "English") },
                                 border = null // Eliminamos borde
                             )
                         }
@@ -177,7 +181,7 @@ fun OnboardingScreen(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Nombre de usuario *") },
+                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_username_label)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Person,
@@ -189,7 +193,7 @@ fun OnboardingScreen(
                     isError = usernameTouched && username.isBlank(),
                     supportingText = {
                         if (usernameTouched && username.isBlank()) {
-                            Text("El nombre de usuario es obligatorio")
+                            Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_username_error))
                         }
                     },
                     modifier = Modifier
@@ -214,14 +218,14 @@ fun OnboardingScreen(
                             yearTouched = true
                         }
                     },
-                    label = { Text("Año de Nacimiento (Ej. 2002) *") },
+                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_birthyear_label)) },
                     singleLine = true,
                     isError = !isYearValid || (yearTouched && birthYear.isBlank()),
                     supportingText = {
                         if ((yearTouched || birthYear.isNotEmpty()) && !isYearValid) {
-                            Text("Año fuera de rango ($minValidYear - $maxValidYear)")
+                            Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_birthyear_error_out_of_range) + " ($minValidYear - $maxValidYear)")
                         } else if (yearTouched && birthYear.isBlank()) {
-                            Text("El año de nacimiento es obligatorio")
+                            Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_birthyear_error_required))
                         }
                     },
                     modifier = Modifier
@@ -246,7 +250,7 @@ fun OnboardingScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Rango de precio: ${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €",
+                            text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_price_range) + " ${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -276,19 +280,19 @@ fun OnboardingScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Solo juegos ya estrenados",
+                                text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_released_only_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (onlyReleased) "No se mostrarán próximos lanzamientos" else "Se incluirán juegos aún no lanzados",
+                                text = if (onlyReleased) androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_released_only_desc_on) else androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_released_only_desc_off),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
                             checked = onlyReleased,
-                            onCheckedChange = { onlyReleased = it }
+                            onCheckedChange = { onToggleDarkMode(it) }
                         )
                     }
                 }
@@ -298,7 +302,7 @@ fun OnboardingScreen(
                 // Géneros Preferidos
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Géneros Preferidos (Opcional)",
+                        text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_genres_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -313,7 +317,7 @@ fun OnboardingScreen(
                                 onClick = {
                                     selectedGenres = if (selectedGenres.contains(genre)) selectedGenres - genre else selectedGenres + genre
                                 },
-                                label = { Text(genre) },
+                                label = { Text(com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(genre)) },
                                 border = null // Eliminamos borde alrededor de los chips de selección
                             )
                         }
@@ -332,12 +336,12 @@ fun OnboardingScreen(
                         val validYear = yNum != null && yNum in minValidYear..maxValidYear
 
                         if (username.isBlank() || birthYear.isBlank()) {
-                            Toast.makeText(context, "Por favor, completa tu nombre y año de nacimiento", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(com.pamn.gamematch.R.string.onboarding_error_incomplete), Toast.LENGTH_SHORT).show()
                             return@Button
                         }
 
                         if (!validYear) {
-                            Toast.makeText(context, "Año de nacimiento fuera de rango ($minValidYear - $maxValidYear)", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(com.pamn.gamematch.R.string.onboarding_birthyear_error_out_of_range) + " ($minValidYear - $maxValidYear)", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
 
@@ -350,7 +354,7 @@ fun OnboardingScreen(
                             onlyReleased = onlyReleased,
                             birthYear = birthYear,
                             isDarkMode = isDarkMode,
-                            language = selectedLanguage,
+                            language = currentLanguage,
                             profilePictureUrl = profilePictureUrl
                         )
 
@@ -359,7 +363,7 @@ fun OnboardingScreen(
                             if (success) {
                                 onOnboardingComplete()
                             } else {
-                                Toast.makeText(context, "Error al guardar el perfil", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(com.pamn.gamematch.R.string.onboarding_error_save), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -374,7 +378,7 @@ fun OnboardingScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
-                        Text("Comenzar a Explorar", style = MaterialTheme.typography.titleMedium)
+                        Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_continue), style = MaterialTheme.typography.titleMedium)
                     }
                 }
 

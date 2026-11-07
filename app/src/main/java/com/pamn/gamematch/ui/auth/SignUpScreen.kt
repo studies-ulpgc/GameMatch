@@ -89,7 +89,7 @@ fun SignUpScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Crear Cuenta",
+                    text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_title),
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
@@ -106,7 +106,7 @@ fun SignUpScreen(
                         email = it
                         viewModel.clearError()
                     },
-                    label = { Text("Correo electrónico") },
+                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email)) },
                     leadingIcon = {
                         Icon(Icons.Default.Email, contentDescription = null)
                     },
@@ -132,8 +132,8 @@ fun SignUpScreen(
                     supportingText = {
                         if (emailTouched) {
                             when {
-                                email.isBlank() -> Text("El correo es obligatorio", color = SoftErrorColor)
-                                !isEmailValid -> Text("Correo inválido", color = SoftErrorColor)
+                                email.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email_required), color = SoftErrorColor)
+                                !isEmailValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_email_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -157,7 +157,7 @@ fun SignUpScreen(
                         password = it
                         viewModel.clearError()
                     },
-                    label = { Text("Contraseña") },
+                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password)) },
                     leadingIcon = {
                         Icon(Icons.Default.Lock, contentDescription = null)
                     },
@@ -195,8 +195,8 @@ fun SignUpScreen(
                     supportingText = {
                         if (passwordTouched) {
                             when {
-                                password.isBlank() -> Text("La contraseña es obligatoria", color = SoftErrorColor)
-                                !isPasswordValid -> Text("Mínimo 6 caracteres", color = SoftErrorColor)
+                                password.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password_required), color = SoftErrorColor)
+                                !isPasswordValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_password_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -231,7 +231,7 @@ fun SignUpScreen(
                         confirmPassword = it
                         viewModel.clearError()
                     },
-                    label = { Text("Confirmar contraseña") },
+                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_confirm_password)) },
                     leadingIcon = {
                         Icon(Icons.Default.Lock, contentDescription = null)
                     },
@@ -269,8 +269,8 @@ fun SignUpScreen(
                     supportingText = {
                         if (confirmTouched) {
                             when {
-                                confirmPassword.isBlank() -> Text("Confirma tu contraseña", color = SoftErrorColor)
-                                !isConfirmValid -> Text("Las contraseñas no coinciden", color = SoftErrorColor)
+                                confirmPassword.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_confirm_password), color = SoftErrorColor)
+                                !isConfirmValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_confirm_password_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -289,9 +289,10 @@ fun SignUpScreen(
 
                 viewModel.errorMessage?.let { error ->
                     Text(
-                        text = error,
+                        text = error.asString(),
                         color = SoftErrorColor,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -317,14 +318,14 @@ fun SignUpScreen(
                             .fillMaxWidth()
                             .height(50.dp)
                     ) {
-                        Text("Registrarse", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 TextButton(onClick = onNavigateToLogin) {
-                    Text("¿Ya tienes cuenta? Inicia Sesión", color = SteamAccentBlue)
+                    Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_already_account), color = SteamAccentBlue)
                 }
             }
         }

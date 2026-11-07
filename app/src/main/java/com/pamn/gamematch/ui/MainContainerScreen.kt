@@ -16,13 +16,17 @@ import com.pamn.gamematch.ui.favorites.FavoritesScreen
 import com.pamn.gamematch.ui.profile.ProfileScreen
 import com.pamn.gamematch.ui.swipe.SwipeScreen
 
+import androidx.compose.runtime.saveable.rememberSaveable
+
 @Composable
 fun MainContainerScreen(
     onLogout: () -> Unit,
     isDarkMode: Boolean = true,
-    onToggleDarkMode: (Boolean) -> Unit = {}
+    onToggleDarkMode: (Boolean) -> Unit = {},
+    currentLanguage: String = "es",
+    onChangeLanguage: (String) -> Unit = {}
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     Scaffold(
         bottomBar = {
@@ -41,36 +45,36 @@ fun MainContainerScreen(
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = "Swipe") },
-                    label = { Text("Swipe") },
+                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_swipe)) },
+                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_swipe)) },
                     colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Descubrir") },
-                    label = { Text("Descubrir") },
+                    icon = { Icon(Icons.Default.Search, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_discover)) },
+                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_discover)) },
                     colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Groups, contentDescription = "Comunidad") },
-                    label = { Text("Comunidad") },
+                    icon = { Icon(Icons.Default.Groups, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_community)) },
+                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_community)) },
                     colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Favorite, contentDescription = "Favoritos") },
-                    label = { Text("Favoritos") },
+                    icon = { Icon(Icons.Default.Favorite, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_favorites)) },
+                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_favorites)) },
                     colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedTab == 4,
                     onClick = { selectedTab = 4 },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
-                    label = { Text("Perfil") },
+                    icon = { Icon(Icons.Default.Person, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_profile)) },
+                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.nav_profile)) },
                     colors = navItemColors
                 )
             }
@@ -90,7 +94,9 @@ fun MainContainerScreen(
                 4 -> ProfileScreen(
                     onLogout = onLogout,
                     isDarkModeGlobal = isDarkMode,
-                    onToggleDarkModeGlobal = onToggleDarkMode
+                    onToggleDarkModeGlobal = onToggleDarkMode,
+                    currentLanguage = currentLanguage,
+                    onChangeLanguage = onChangeLanguage
                 )
             }
         }

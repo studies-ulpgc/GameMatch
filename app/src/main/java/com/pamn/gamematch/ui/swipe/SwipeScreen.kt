@@ -133,7 +133,7 @@ fun SwipeScreen(
                         },
                         onSwipeRight = {
                             gameRepository?.saveLikedGame(currentGame.id) { success ->
-                                if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
+                                if (success) Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.swipe_saved_favorites), Toast.LENGTH_SHORT).show()
                             }
                             history = history + currentGame
                             gameList = gameList.drop(1)
@@ -148,14 +148,14 @@ fun SwipeScreen(
                     modifier = Modifier.padding(24.dp)
                 ) {
                     Text(
-                        text = "No hay juegos disponibles en el catálogo.",
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.swipe_empty_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Sincroniza el catálogo desde tu perfil (Admin).",
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.swipe_empty_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -189,7 +189,7 @@ fun SwipeScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Dislike",
+                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.swipe_cd_dislike),
                         tint = dislikeIconColor,
                         modifier = Modifier.size(28.dp)
                     )
@@ -206,11 +206,11 @@ fun SwipeScreen(
 
                             gameRepository?.removeLikedGame(last.id) { success ->
                                 if (success) {
-                                    Toast.makeText(context, "Deshecho y eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.swipe_undo_success), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         } else {
-                            Toast.makeText(context, "No hay historial para deshacer", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.swipe_undo_empty), Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier
@@ -219,7 +219,7 @@ fun SwipeScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Deshacer",
+                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.swipe_cd_undo),
                         tint = secondaryIconColor,
                         modifier = Modifier.size(22.dp)
                     )
@@ -238,7 +238,7 @@ fun SwipeScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "Información",
+                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.swipe_cd_info),
                         tint = if (isDarkTheme) secondaryIconColor else SteamAccentBlue,
                         modifier = Modifier.size(22.dp)
                     )
@@ -249,7 +249,7 @@ fun SwipeScreen(
                     onClick = {
                         if (currentGame != null) {
                             gameRepository?.saveLikedGame(currentGame.id) { success ->
-                                if (success) Toast.makeText(context, "¡Guardado en favoritos!", Toast.LENGTH_SHORT).show()
+                                if (success) Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.swipe_saved_favorites), Toast.LENGTH_SHORT).show()
                             }
                             history = history + currentGame
                             gameList = gameList.drop(1)
@@ -262,7 +262,7 @@ fun SwipeScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
-                        contentDescription = "Like",
+                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.swipe_cd_like),
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
                     )

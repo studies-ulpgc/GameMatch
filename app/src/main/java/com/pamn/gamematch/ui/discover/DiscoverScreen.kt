@@ -88,7 +88,7 @@ fun DiscoverScreen(
         // Título de la pantalla
         item {
             Text(
-                text = "Descubrir",
+                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_title),
                 style = MaterialTheme.typography.headlineLarge,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
@@ -100,7 +100,7 @@ fun DiscoverScreen(
                 value = uiState.searchQuery,
                 onValueChange = viewModel::onSearchQueryChanged,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar juego o género...") },
+                placeholder = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_search_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -112,7 +112,7 @@ fun DiscoverScreen(
                         IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Limpiar búsqueda"
+                                contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_search_clear)
                             )
                         }
                     }
@@ -137,7 +137,7 @@ fun DiscoverScreen(
                     FilterChip(
                         selected = isSelected,
                         onClick = { viewModel.onPlatformSelected(platform) },
-                        label = { Text(platform) },
+                        label = { Text(if (platform == "Todas") androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_platform_all) else platform) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -156,12 +156,12 @@ fun DiscoverScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Precio máx:",
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_price_max),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = if (uiState.maxPrice >= 100.0) "Cualquiera" else "${uiState.maxPrice.toInt()} €",
+                        text = if (uiState.maxPrice >= 100.0) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_price_any) else "${uiState.maxPrice.toInt()} €",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -193,7 +193,7 @@ fun DiscoverScreen(
             // Muestra los resultados filtrados
             item {
                 Text(
-                    text = "Resultados (${uiState.filteredGames.size})",
+                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_results, uiState.filteredGames.size),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
@@ -208,7 +208,7 @@ fun DiscoverScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No se encontraron juegos con estos filtros.",
+                            text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_empty),
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.Center
                         )
@@ -241,7 +241,7 @@ fun DiscoverScreen(
             // Carruseles horizontales (+ Destacado y + Trending)
             item {
                 Text(
-                    text = "+ Destacado",
+                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_featured),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -266,7 +266,7 @@ fun DiscoverScreen(
 
             item {
                 Text(
-                    text = "+ Trending",
+                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_trending),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)

@@ -169,7 +169,7 @@ fun GameDetailModal(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Género: ${game.genre}",
+                            text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_genre, com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(game.genre)),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
@@ -186,7 +186,7 @@ fun GameDetailModal(
                                     onClick = { openSteamStore(game.steamAppId) }
                                 ) {
                                     Text(
-                                        text = "Steam 🛒",
+                                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_steam_badge),
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -212,7 +212,7 @@ fun GameDetailModal(
                                     }
                                 } else {
                                     Text(
-                                        text = uiState.priceDisplay ?: (if (game.price == null || game.price == 0.0) "Gratis" else "${game.price} €"),
+                                        text = uiState.priceDisplay ?: (if (game.price == null || game.price == 0.0) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_format, game.price.toString())),
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = Color.Black
@@ -237,8 +237,8 @@ fun GameDetailModal(
                         )
                         Text(
                             text = if (uiState.reviews.isNotEmpty())
-                                String.format(Locale.getDefault(), "%.1f / 5 (%d reseñas)", uiState.averageRating, uiState.reviews.size)
-                            else "Sin reseñas aún",
+                                String.format(java.util.Locale.getDefault(), "%.1f / 5 (%d)", uiState.averageRating, uiState.reviews.size)
+                            else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_no_reviews),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -257,7 +257,7 @@ fun GameDetailModal(
                             onClick = { openSteamStore(game.steamAppId) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Ver ficha oficial en Steam 🛒")
+                            Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_steam_button))
                         }
                     }
 
@@ -268,7 +268,7 @@ fun GameDetailModal(
                 // Sección de Mi Reseña (CRUD)
                 item {
                     Text(
-                        text = "Tu Reseña",
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_your_review),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -305,7 +305,7 @@ fun GameDetailModal(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
-                                                contentDescription = "Editar reseña",
+                                                contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_edit_review),
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
@@ -315,7 +315,7 @@ fun GameDetailModal(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "Eliminar reseña",
+                                                contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_delete_review),
                                                 tint = MaterialTheme.colorScheme.error
                                             )
                                         }
@@ -355,7 +355,7 @@ fun GameDetailModal(
                             OutlinedTextField(
                                 value = userCommentInput,
                                 onValueChange = { userCommentInput = it },
-                                label = { Text("Escribe tu opinión sobre el juego...") },
+                                label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_review_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 2,
                                 maxLines = 3
@@ -373,7 +373,7 @@ fun GameDetailModal(
                                         userRatingInput = uiState.userReview?.rating ?: 5
                                         userCommentInput = uiState.userReview?.comment ?: ""
                                     }) {
-                                        Text("Cancelar")
+                                        Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_cancel))
                                     }
                                     Spacer(modifier = Modifier.width(6.dp))
                                 }
@@ -394,7 +394,7 @@ fun GameDetailModal(
                                             color = MaterialTheme.colorScheme.onPrimary
                                         )
                                     } else {
-                                        Text(if (uiState.userReview != null) "Guardar Cambios" else "Publicar Reseña")
+                                        Text(if (uiState.userReview != null) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_save_changes) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_publish_review))
                                     }
                                 }
                             }

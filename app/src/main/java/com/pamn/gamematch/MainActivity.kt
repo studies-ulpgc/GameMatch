@@ -1,31 +1,37 @@
 package com.pamn.gamematch
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.pamn.gamematch.ui.MainContainerScreen
 import com.pamn.gamematch.ui.auth.LoginScreen
 import com.pamn.gamematch.ui.auth.OnboardingScreen
 import com.pamn.gamematch.ui.auth.SignUpScreen
+import com.pamn.gamematch.ui.settings.AppSettingsViewModel
 import com.pamn.gamematch.ui.theme.GameMatchTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            var isDarkMode by remember { mutableStateOf(true) } // Cambiado a true por defecto
-            var currentScreen by remember { mutableStateOf("login") }
+            val settingsViewModel: AppSettingsViewModel = viewModel()
+            val settingsState by settingsViewModel.uiState.collectAsState()
+
+            val auth = FirebaseAuth.getInstance()
+            val startScreen = if (auth.currentUser != null) "main" else "login"
+            var currentScreen by rememberSaveable { mutableStateOf(startScreen) }
 
             // Cambia el color de los iconos de la barra de estado (hora/batería)
-            DisposableEffect(isDarkMode) {
+            DisposableEffect(settingsState.isDarkMode) {
                 enableEdgeToEdge(
-                    statusBarStyle = if (isDarkMode) {
+                    statusBarStyle = if (settingsState.isDarkMode) {
                         SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                     } else {
                         SystemBarStyle.light(
@@ -37,23 +43,19 @@ class MainActivity : ComponentActivity() {
                 onDispose { }
             }
 
-            // Carga el tema guardado en Firebase al iniciar
+            // Carga ajustes cuando la pantalla principal es activa
             LaunchedEffect(currentScreen) {
-                val uid = FirebaseAuth.getInstance().currentUser?.uid
-                if (uid != null) {
-                    FirebaseFirestore.getInstance().collection("users").document(uid).get()
-                        .addOnSuccessListener { doc ->
-                            doc.getBoolean("isDarkMode")?.let { savedMode ->
-                                isDarkMode = savedMode
-                            }
-                        }
+                if (auth.currentUser != null) {
+                    settingsViewModel.loadSettings()
                 }
             }
 
-            GameMatchTheme(darkTheme = isDarkMode) {
+            GameMatchTheme(darkTheme = settingsState.isDarkMode) {
                 when (currentScreen) {
                     "login" -> LoginScreen(
-                        onLoginSuccess = { currentScreen = "main" },
+                        onLoginSuccess = {
+                            currentScreen = "main"
+                        },
                         onNavigateToSignUp = { currentScreen = "signup" }
                     )
                     "signup" -> SignUpScreen(
@@ -62,13 +64,17 @@ class MainActivity : ComponentActivity() {
                     )
                     "onboarding" -> OnboardingScreen(
                         onOnboardingComplete = { currentScreen = "main" },
-                        isDarkMode = isDarkMode,
-                        onToggleDarkMode = { isDarkMode = it }
+                        isDarkMode = settingsState.isDarkMode,
+                        onToggleDarkMode = { settingsViewModel.onToggleDarkMode(it, saveToFirestore = false) },
+                        currentLanguage = settingsState.language,
+                        onChangeLanguage = { settingsViewModel.onChangeLanguage(it, saveToFirestore = false) }
                     )
                     "main" -> MainContainerScreen(
                         onLogout = { currentScreen = "login" },
-                        isDarkMode = isDarkMode,
-                        onToggleDarkMode = { isDarkMode = it }
+                        isDarkMode = settingsState.isDarkMode,
+                        onToggleDarkMode = { settingsViewModel.onToggleDarkMode(it, saveToFirestore = true) },
+                        currentLanguage = settingsState.language,
+                        onChangeLanguage = { settingsViewModel.onChangeLanguage(it, saveToFirestore = true) }
                     )
                 }
             }
