@@ -24,7 +24,7 @@ class CommunityRepository(
                 val username = doc.getString("username") ?: ""
                 val email = doc.getString("email") ?: ""
                 val birthYear = doc.getString("birthYear") ?: ""
-                val language = doc.getString("language") ?: "Español"
+                val language = com.pamn.gamematch.utils.LocaleUtils.normalizeLanguage(doc.getString("language"))
                 val minPrice = (doc.getDouble("minPrice") ?: 0.0)
                 val maxPrice = (doc.getDouble("maxPrice") ?: 100.0)
                 val onlyReleased = doc.getBoolean("onlyReleased") ?: true
@@ -208,7 +208,7 @@ class CommunityRepository(
                         username = doc.getString("username") ?: "Jugador",
                         email = doc.getString("email") ?: "",
                         birthYear = doc.getString("birthYear") ?: "",
-                        language = doc.getString("language") ?: "Español",
+                        language = com.pamn.gamematch.utils.LocaleUtils.normalizeLanguage(doc.getString("language")),
                         preferredGenres = (doc.get("preferredGenres") as? List<*>)
                             ?.filterIsInstance<String>() ?: emptyList()
                     )

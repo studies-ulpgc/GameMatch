@@ -76,7 +76,7 @@ fun FavoritesScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Mis Favoritos",
+                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.favorites_title),
                 style = MaterialTheme.typography.headlineLarge,
                 modifier = Modifier.padding(vertical = 12.dp)
             )
@@ -88,7 +88,7 @@ fun FavoritesScreen(
 
                 FavoritesUiState.Empty -> CenteredBox {
                     Text(
-                        text = "Aún no tienes matches",
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.favorites_empty),
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
                     )
@@ -104,7 +104,7 @@ fun FavoritesScreen(
                         Button(
                             onClick = viewModel::loadLikedGames,
                             modifier = Modifier.padding(top = 12.dp)
-                        ) { Text("Reintentar") }
+                        ) { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.favorites_retry)) }
                     }
                 }
 
@@ -116,15 +116,18 @@ fun FavoritesScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(state.games, key = { it.id }) { game ->
+                        val context = androidx.compose.ui.platform.LocalContext.current
                         FavoriteGameGridCard(
                             game = game,
                             onShowInfo = { selectedGameForModal = game },
                             onRemove = {
                                 viewModel.removeFavorite(game.id)
                                 coroutineScope.launch {
+                                    val msg = context.getString(com.pamn.gamematch.R.string.favorites_removed_msg, game.title)
+                                    val undoMsg = context.getString(com.pamn.gamematch.R.string.favorites_undo)
                                     val result = snackbarHostState.showSnackbar(
-                                        message = "\"${game.title}\" eliminado de favoritos",
-                                        actionLabel = "Deshacer",
+                                        message = msg,
+                                        actionLabel = undoMsg,
                                         duration = SnackbarDuration.Short
                                     )
                                     if (result == SnackbarResult.ActionPerformed) {
@@ -187,7 +190,7 @@ private fun FavoriteGameGridCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Info,
-                    contentDescription = "Información",
+                    contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.favorites_info),
                     tint = SteamAccentBlue,
                     modifier = Modifier.size(20.dp)
                 )
@@ -205,7 +208,7 @@ private fun FavoriteGameGridCard(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Favorite,
-                    contentDescription = "Quitar de favoritos",
+                    contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.favorites_remove),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )

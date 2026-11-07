@@ -1,5 +1,7 @@
 package com.pamn.gamematch.data.model
 
+import com.google.firebase.firestore.PropertyName
+
 data class User(
     val uid: String = "",
     val email: String = "",
@@ -10,7 +12,8 @@ data class User(
     val maxPrice: Float = 70f,
     val onlyReleased: Boolean = true,
     val birthYear: String = "",
+    @get:PropertyName("isDarkMode") @field:PropertyName("isDarkMode")
     val isDarkMode: Boolean = true,
-    val language: String = "Español",
+    val language: String = "es",
     val profilePictureUrl: String = "https://api.dicebear.com/7.x/bottts/png?seed=default"
 )

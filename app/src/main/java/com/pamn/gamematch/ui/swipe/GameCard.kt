@@ -133,7 +133,7 @@ fun GameCard(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = "Próximamente",
+                                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_status_upcoming),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White
@@ -146,7 +146,7 @@ fun GameCard(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = if (game.price == null) "Consultar" else if (game.price == 0.0) "Gratis" else "${game.price} €",
+                            text = if (game.price == null) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_check) else if (game.price == 0.0) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_format, game.price.toString()),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Black
