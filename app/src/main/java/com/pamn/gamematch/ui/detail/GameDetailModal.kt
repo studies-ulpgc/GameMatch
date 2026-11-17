@@ -196,15 +196,7 @@ fun GameDetailModal(
                                         )
                                     }
                                 } else {
-                                    val priceText = when {
-                                        uiState.priceDisplay != null -> {
-                                            if (uiState.priceDisplay == "Gratis") androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free)
-                                            else com.pamn.gamematch.utils.PriceFormatter.formatSteamPriceString(uiState.priceDisplay!!)
-                                        }
-                                        game.price != null && game.price > 0.0 -> com.pamn.gamematch.utils.PriceFormatter.formatPrice(game.price)
-                                        game.price == 0.0 -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free)
-                                        else -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_not_available)
-                                    }
+                                    val priceText = com.pamn.gamematch.ui.components.priceLabel(uiState.price)
 
                                     Text(
                                         text = priceText,

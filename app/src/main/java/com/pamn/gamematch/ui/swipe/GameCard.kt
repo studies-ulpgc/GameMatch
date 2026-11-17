@@ -40,11 +40,7 @@ fun GameCard(
     // Ángulo de inclinación suave según el arrastre
     val rotation = (offsetX / 600f) * 15f
 
-    val priceBadgeText = when {
-        game.price != null && game.price > 0.0 -> com.pamn.gamematch.utils.PriceFormatter.formatPrice(game.price)
-        game.price == 0.0 -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free)
-        else -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_not_available)
-    }
+    val priceBadgeText = com.pamn.gamematch.ui.components.priceLabel(game.price)
 
     Box(
         modifier = modifier

@@ -16,13 +16,4 @@ object PriceFormatter {
         }
         return formatted.trim()
     }
-
-    fun formatSteamPriceString(steamPrice: String): String {
-        // Aseguramos que haya un espacio antes de '€'
-        var formatted = steamPrice.replace("\u00A0", " ")
-        if (formatted.endsWith("€") && !formatted.endsWith(" €")) {
-            formatted = formatted.replace("€", " €")
-        }
-        return formatted.trim()
-    }
 }

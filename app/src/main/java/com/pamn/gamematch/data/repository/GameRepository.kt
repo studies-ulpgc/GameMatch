@@ -22,21 +22,23 @@ class GameRepository {
     }
 
     /**
-     * Consulta el precio formateado de un juego en la tienda pública de Steam bajo demanda.
+     * Consulta el precio de un juego en la tienda pública de Steam bajo demanda.
      */
-    suspend fun getSteamPrice(steamAppId: Int): Result<String?> {
+    suspend fun getSteamPrice(steamAppId: Int): Result<Double?> {
         return runCatching {
-            val response = RetrofitClient.steamApiService.getAppDetails(appIds = steamAppId)
-            val appContainer = response[steamAppId.toString()]
-            if (appContainer?.success == true) {
-                val appData = appContainer.data
-                if (appData?.isFree == true) {
-                    "Gratis"
-                } else {
-                    appData?.priceOverview?.finalFormatted
-                }
+            val response = RetrofitClient.steamApiService.getAppDetailsBatch(appIds = steamAppId.toString())
+            val pricesMap = com.pamn.gamematch.data.remote.mapper.parseSteamBatchPrices(response)
+            if (pricesMap.containsKey(steamAppId)) {
+                pricesMap[steamAppId]
             } else {
-                null
+                kotlinx.coroutines.delay(300)
+                val basicResponse = RetrofitClient.steamApiService.getAppDetailsBasic(appIds = steamAppId.toString())
+                val element = basicResponse[steamAppId.toString()]
+                if (com.pamn.gamematch.data.remote.mapper.parseSteamIsFree(element)) {
+                    0.0
+                } else {
+                    null
+                }
             }
         }.onFailure { e ->
             Log.w("GameRepository", "Error consultando precio en Steam para appId $steamAppId: ${e.localizedMessage}")
@@ -159,7 +161,25 @@ class GameRepository {
                 try {
                     val appIdsStr = batchGames.map { it.steamAppId }.joinToString(",")
                     val steamResponse = RetrofitClient.steamApiService.getAppDetailsBatch(appIds = appIdsStr)
+
+                    // 1. Obtener precios normales de pago
                     steamPrices.putAll(com.pamn.gamematch.data.remote.mapper.parseSteamBatchPrices(steamResponse))
+
+                    // 2. Obtener appids sin precio (por ejemplo F2P con data: [])
+                    val noPriceAppIds = com.pamn.gamematch.data.remote.mapper.parseSteamBatchWithoutPrice(steamResponse)
+
+                    for (appId in noPriceAppIds) {
+                        try {
+                            kotlinx.coroutines.delay(300)
+                            val basicResponse = RetrofitClient.steamApiService.getAppDetailsBasic(appIds = appId.toString())
+                            val element = basicResponse[appId.toString()]
+                            if (com.pamn.gamematch.data.remote.mapper.parseSteamIsFree(element)) {
+                                steamPrices[appId] = 0.0
+                            }
+                        } catch (indivErr: Exception) {
+                            Log.w("GameRepository", "Error consultando is_free individual para appId $appId: ${indivErr.localizedMessage}")
+                        }
+                    }
                 } catch (e: Exception) {
                     Log.w("GameRepository", "Error al consultar lote de precios a Steam (no se bloqueará la sincronización): ${e.localizedMessage}")
                 }

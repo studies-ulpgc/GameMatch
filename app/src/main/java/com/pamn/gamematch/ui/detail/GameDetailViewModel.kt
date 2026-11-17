@@ -16,7 +16,7 @@ data class GameDetailUiState(
     val reviews: List<GameReview> = emptyList(),
     val userReview: GameReview? = null,
     val averageRating: Double = 0.0,
-    val priceDisplay: String? = null,
+    val price: Double? = null,
     val isPriceLoading: Boolean = false,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
@@ -35,26 +35,19 @@ class GameDetailViewModel(
     /** Consulta asíncrona bajo demanda del precio en Steam. */
     fun loadSteamPrice(steamAppId: Int?, defaultPrice: Double?) {
         if (steamAppId != null) {
-            _uiState.update { it.copy(isPriceLoading = true, priceDisplay = null) }
+            _uiState.update { it.copy(isPriceLoading = true, price = null) }
             viewModelScope.launch {
                 val result = gameRepository.getSteamPrice(steamAppId)
                 result
                     .onSuccess { price ->
-                        val formatted = price ?: if (defaultPrice != null && defaultPrice > 0.0) com.pamn.gamematch.utils.PriceFormatter.formatPrice(defaultPrice) else if (defaultPrice == 0.0) "Gratis" else null
-                        _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
+                        _uiState.update { it.copy(price = price ?: defaultPrice, isPriceLoading = false) }
                     }
                     .onFailure {
-                        val fallback = if (defaultPrice != null && defaultPrice > 0.0) com.pamn.gamematch.utils.PriceFormatter.formatPrice(defaultPrice) else if (defaultPrice == 0.0) "Gratis" else null
-                        _uiState.update { it.copy(priceDisplay = fallback, isPriceLoading = false) }
+                        _uiState.update { it.copy(price = defaultPrice, isPriceLoading = false) }
                     }
             }
         } else {
-            val formatted = when {
-                defaultPrice != null && defaultPrice > 0.0 -> com.pamn.gamematch.utils.PriceFormatter.formatPrice(defaultPrice)
-                defaultPrice == 0.0 -> "Gratis"
-                else -> null
-            }
-            _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
+            _uiState.update { it.copy(price = defaultPrice, isPriceLoading = false) }
         }
     }
 

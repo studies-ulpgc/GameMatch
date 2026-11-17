@@ -19,4 +19,11 @@ interface SteamApiService {
         @Query("cc") countryCode: String = "es",
         @Query("filters") filters: String = "price_overview"
     ): Map<String, JsonElement>
+
+    @GET("api/appdetails")
+    suspend fun getAppDetailsBasic(
+        @Query("appids") appIds: String,
+        @Query("cc") countryCode: String = "es",
+        @Query("filters") filters: String = "basic"
+    ): Map<String, JsonElement>
 }
