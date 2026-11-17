@@ -69,9 +69,9 @@
     <string name="profile_delete_account">Delete Account</string>
     <string name="profile_logout">Log Out</string>
     <string name="profile_dev_tools">Developer Tools</string>
-    <string name="profile_dev_sync_desc">Sync RAWG API catalog to Cloud Firestore.</string>
+    <string name="profile_dev_sync_desc">Sync IGDB API catalog to Cloud Firestore.</string>
     <string name="profile_dev_syncing">Syncing...</string>
-    <string name="profile_dev_sync_btn">Sync catalog with RAWG (Admin)</string>
+    <string name="profile_dev_sync_btn">Sync catalog with IGDB (Admin)</string>
 
     <!-- Discover -->
     <string name="discover_title">Discover</string>
@@ -97,9 +97,8 @@
 
     <!-- Game Card & Detail -->
     <string name="game_status_upcoming">Upcoming</string>
-    <string name="game_price_check">Check</string>
     <string name="game_price_free">Free</string>
-    <string name="game_price_format">%1$s €</string>
+    <string name="game_price_not_available">Price not available</string>
 
     <!-- Game Detail Modal -->
     <string name="detail_genre">Genre: %1$s</string>
@@ -113,6 +112,10 @@
     <string name="detail_cancel">Cancel</string>
     <string name="detail_save_changes">Save Changes</string>
     <string name="detail_publish_review">Publish Review</string>
+    <string name="detail_more_info">More Info ➔</string>
+    <string name="detail_close">Close</string>
+    <string name="detail_community_reviews">All Community Reviews 💬</string>
+    <string name="detail_no_other_reviews">No reviews from other players yet.</string>
 
     <!-- Community -->
     <string name="community_title">Community</string>
@@ -240,7 +243,8 @@
 
     <!-- Swipe -->
     <string name="swipe_empty_title">No games available in the catalog.</string>
-    <string name="swipe_empty_subtitle">Sync the catalog from your profile (Admin).</string>
+    <string name="swipe_empty_subtitle">Sync the catalog from your profile (Admin) or tap Load games.</string>
+    <string name="swipe_reload_button">Load games</string>
     <string name="swipe_saved_favorites">Saved to favorites!</string>
     <string name="swipe_undo_success">Undone and removed from favorites</string>
     <string name="swipe_undo_empty">No history to undo</string>

@@ -163,10 +163,9 @@ fun GameDetailModal(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
                             text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_genre, com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(game.genre)),
@@ -175,26 +174,12 @@ fun GameDetailModal(
                             fontWeight = FontWeight.SemiBold
                         )
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                        androidx.compose.foundation.layout.FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            itemVerticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (game.steamAppId != null) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = RoundedCornerShape(6.dp),
-                                    onClick = { openSteamStore(game.steamAppId) }
-                                ) {
-                                    Text(
-                                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_steam_badge),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
                             Surface(
                                 color = SteamAccentBlue,
                                 shape = RoundedCornerShape(6.dp)
@@ -205,17 +190,44 @@ fun GameDetailModal(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         CircularProgressIndicator(
-                                            modifier = Modifier.size(12.dp),
+                                            modifier = Modifier.size(14.dp),
                                             color = Color.Black,
                                             strokeWidth = 2.dp
                                         )
                                     }
                                 } else {
+                                    val priceText = when {
+                                        uiState.priceDisplay != null -> {
+                                            if (uiState.priceDisplay == "Gratis") androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free)
+                                            else com.pamn.gamematch.utils.PriceFormatter.formatSteamPriceString(uiState.priceDisplay!!)
+                                        }
+                                        game.price != null && game.price > 0.0 -> com.pamn.gamematch.utils.PriceFormatter.formatPrice(game.price)
+                                        game.price == 0.0 -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free)
+                                        else -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_not_available)
+                                    }
+
                                     Text(
-                                        text = uiState.priceDisplay ?: (if (game.price == null || game.price == 0.0) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_format, game.price.toString())),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.Black
+                                        text = priceText,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = Color.Black,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            if (game.steamAppId != null) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(6.dp),
+                                    onClick = { openSteamStore(game.steamAppId) }
+                                ) {
+                                    Text(
+                                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_steam_badge),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
@@ -408,7 +420,7 @@ fun GameDetailModal(
                 // Lista de Reseñas de Otros Usuarios
                 item {
                     Text(
-                        text = "Todas las Reseñas Comunitarias 💬",
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_community_reviews),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -429,7 +441,7 @@ fun GameDetailModal(
                 } else if (uiState.reviews.isEmpty()) {
                     item {
                         Text(
-                            text = "Aún no hay reseñas de otros jugadores.",
+                            text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_no_other_reviews),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -443,17 +455,9 @@ fun GameDetailModal(
         },
         confirmButton = {
             Button(
-                onClick = {
-                    onDismiss()
-                    onNavigateToFullDetails(game.id)
-                }
+                onClick = onDismiss
             ) {
-                Text("Más Información ➔")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_close))
             }
         }
     )

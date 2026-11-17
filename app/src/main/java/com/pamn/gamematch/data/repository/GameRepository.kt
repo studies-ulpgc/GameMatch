@@ -17,6 +17,10 @@ class GameRepository {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
+    companion object {
+        const val GAMES_COLLECTION = "games_test"
+    }
+
     /**
      * Consulta el precio formateado de un juego en la tienda pública de Steam bajo demanda.
      */
@@ -39,51 +43,64 @@ class GameRepository {
         }
     }
 
+    private fun parseGamesFromSnapshot(snapshot: com.google.firebase.firestore.QuerySnapshot): List<Game> {
+        return snapshot.documents.mapNotNull { doc ->
+            val id = doc.id
+            val title = doc.getString("title") ?: doc.getString("name") ?: ""
+            val description = doc.getString("description") ?: ""
+            val imageUrl = doc.getString("imageUrl") ?: doc.getString("background_image") ?: ""
+            val genre = doc.getString("genre") ?: ""
+            val price = doc.getDouble("price")
+            val releaseDate = doc.getString("releaseDate") ?: "Disponible"
+            val isReleased = doc.getBoolean("isReleased") ?: true
+            val platforms = (doc.get("platforms") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+            val steamAppId = doc.getLong("steamAppId")?.toInt()
+            val rating = doc.getDouble("rating") ?: 0.0
+            val isFeatured = doc.getBoolean("isFeatured") ?: false
+            val isTrending = doc.getBoolean("isTrending") ?: false
+
+            if (title.isNotBlank()) {
+                Game(
+                    id = id,
+                    title = title,
+                    description = description,
+                    imageUrl = imageUrl,
+                    genre = genre,
+                    price = price,
+                    releaseDate = releaseDate,
+                    isReleased = isReleased,
+                    platforms = platforms,
+                    steamAppId = steamAppId,
+                    rating = rating,
+                    isFeatured = isFeatured,
+                    isTrending = isTrending
+                )
+            } else null
+        }
+    }
+
     /**
-     * Consulta el catálogo de juegos exclusivamente desde la colección 'games' en Cloud Firestore.
-     * Devuelve Result.success(cachedGames) si existen registros, Result.success(emptyList()) si está vacía,
-     * o Result.failure(e) si ocurre un error de red/permisos en Firestore.
+     * Consulta el catálogo de juegos exclusivamente desde la colección de juegos en Cloud Firestore.
+     * Si la colección está vacía en Firestore, realiza una auto-sincronización inicial desde IGDB API.
      */
     suspend fun getGamesCatalog(
         page: Int = 1,
-        pageSize: Int = 20,
+        pageSize: Int = 50,
         searchQuery: String? = null,
         genres: String? = null
     ): Result<List<Game>> {
         return try {
-            val snapshot = db.collection("games").limit(pageSize.toLong()).get().await()
-            var cachedGames = snapshot.documents.mapNotNull { doc ->
-                val id = doc.id
-                val title = doc.getString("title") ?: doc.getString("name") ?: ""
-                val description = doc.getString("description") ?: ""
-                val imageUrl = doc.getString("imageUrl") ?: doc.getString("background_image") ?: ""
-                val genre = doc.getString("genre") ?: ""
-                val price = doc.getDouble("price")
-                val releaseDate = doc.getString("releaseDate") ?: "Disponible"
-                val isReleased = doc.getBoolean("isReleased") ?: true
-                val platforms = (doc.get("platforms") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-                val steamAppId = doc.getLong("steamAppId")?.toInt()
-                val rating = doc.getDouble("rating") ?: 0.0
-                val isFeatured = doc.getBoolean("isFeatured") ?: false
-                val isTrending = doc.getBoolean("isTrending") ?: false
+            val snapshot = db.collection(GAMES_COLLECTION).limit(pageSize.toLong()).get().await()
+            var cachedGames = parseGamesFromSnapshot(snapshot)
 
-                if (title.isNotBlank()) {
-                    Game(
-                        id = id,
-                        title = title,
-                        description = description,
-                        imageUrl = imageUrl,
-                        genre = genre,
-                        price = price,
-                        releaseDate = releaseDate,
-                        isReleased = isReleased,
-                        platforms = platforms,
-                        steamAppId = steamAppId,
-                        rating = rating,
-                        isFeatured = isFeatured,
-                        isTrending = isTrending
-                    )
-                } else null
+            // Si la colección de juegos está vacía en Firestore, auto-sincronizar desde IGDB
+            if (cachedGames.isEmpty() && searchQuery.isNullOrBlank() && genres.isNullOrBlank()) {
+                Log.i("GameRepository", "La colección '$GAMES_COLLECTION' en Firestore está vacía. Sincronizando automáticamente desde IGDB...")
+                val syncResult = syncCatalogFromIgdb(limit = pageSize)
+                if (syncResult.isSuccess) {
+                    val newSnapshot = db.collection(GAMES_COLLECTION).limit(pageSize.toLong()).get().await()
+                    cachedGames = parseGamesFromSnapshot(newSnapshot)
+                }
             }
 
             if (!searchQuery.isNullOrBlank()) {
@@ -104,63 +121,89 @@ class GameRepository {
                 Log.i("GameRepository", "Cargados ${cachedGames.size} juegos desde Firestore.")
                 Result.success(cachedGames)
             } else {
-                Log.i("GameRepository", "La colección 'games' en Firestore está vacía.")
+                Log.i("GameRepository", "La colección '$GAMES_COLLECTION' en Firestore está vacía.")
                 Result.success(emptyList())
             }
         } catch (e: Exception) {
-            Log.e("GameRepository", "Error al consultar la colección 'games' en Firestore: ${e.localizedMessage}", e)
+            Log.e("GameRepository", "Error al consultar la colección '$GAMES_COLLECTION' en Firestore: ${e.localizedMessage}", e)
             Result.failure(e)
         }
     }
 
     /**
-     * Sincronización aislada desde RAWG API para alimentar la colección 'games' en Cloud Firestore.
+     * Sincronización aislada desde IGDB API para alimentar la colección de juegos en Cloud Firestore.
      */
-    suspend fun syncCatalogFromRawg(pageSize: Int = 40): Result<Int> {
-        val apiKey = BuildConfig.RAWG_API_KEY
-        if (apiKey.isBlank()) {
-            val err = "RAWG API Key no está configurada en BuildConfig / local.properties"
+    suspend fun syncCatalogFromIgdb(limit: Int = 40): Result<Int> {
+        val clientId = BuildConfig.IGDB_CLIENT_ID
+        val clientSecret = BuildConfig.IGDB_CLIENT_SECRET
+        if (clientId.isBlank() || clientSecret.isBlank()) {
+            val err = "IGDB Client ID o Secret no están configurados en local.properties / BuildConfig"
             Log.w("GameRepository", err)
             return Result.failure(IllegalStateException(err))
         }
 
         return try {
-            val response = RetrofitClient.rawgApiService.getGames(
-                apiKey = apiKey,
-                pageSize = pageSize
-            )
-            val domainGames = response.results.map { it.toDomain() }
+            val query = "fields name, summary, rating, genres.name, platforms.name, cover.image_id, screenshots.image_id, first_release_date, external_games.external_game_source, external_games.category, external_games.uid, external_games.url; where cover != null & rating != null; sort rating desc; limit $limit; offset 0;"
+            val igdbDtos = RetrofitClient.igdbApiService.getGames(query)
+            val domainGames = igdbDtos.map { it.toDomain() }
 
             if (domainGames.isEmpty()) {
-                return Result.failure(IllegalStateException("RAWG API no devolvió ningún juego"))
+                return Result.failure(IllegalStateException("IGDB API no devolvió ningún juego"))
             }
 
-            val batch = db.batch()
-            domainGames.forEach { game ->
-                val docRef = db.collection("games").document(game.id)
-                val data = hashMapOf(
-                    "title" to game.title,
-                    "description" to game.description,
-                    "imageUrl" to game.imageUrl,
-                    "genre" to game.genre,
-                    "price" to game.price,
-                    "releaseDate" to game.releaseDate,
-                    "isReleased" to game.isReleased,
-                    "platforms" to game.platforms,
-                    "steamAppId" to game.steamAppId,
-                    "rating" to game.rating,
-                    "isFeatured" to game.isFeatured,
-                    "isTrending" to game.isTrending,
-                    "updatedAt" to System.currentTimeMillis()
-                )
-                batch.set(docRef, data, SetOptions.merge())
-            }
-            batch.commit().await()
+            // Consultar precios en Steam por lotes de 20 para no saturar la API
+            val gamesWithSteamId = domainGames.filter { it.steamAppId != null }
+            val steamPrices = mutableMapOf<Int, Double>()
 
-            Log.i("GameRepository", "Sincronizados ${domainGames.size} juegos de RAWG a Firestore.")
+            gamesWithSteamId.chunked(20).forEach { batchGames ->
+                try {
+                    val appIdsStr = batchGames.map { it.steamAppId }.joinToString(",")
+                    val steamResponse = RetrofitClient.steamApiService.getAppDetailsBatch(appIds = appIdsStr)
+                    steamPrices.putAll(com.pamn.gamematch.data.remote.mapper.parseSteamBatchPrices(steamResponse))
+                } catch (e: Exception) {
+                    Log.w("GameRepository", "Error al consultar lote de precios a Steam (no se bloqueará la sincronización): ${e.localizedMessage}")
+                }
+            }
+
+            try {
+                val batch = db.batch()
+                domainGames.forEach { game ->
+                    val docRef = db.collection(GAMES_COLLECTION).document(game.id)
+                    val data = hashMapOf(
+                        "title" to game.title,
+                        "description" to game.description,
+                        "imageUrl" to game.imageUrl,
+                        "genre" to game.genre,
+                        "releaseDate" to game.releaseDate,
+                        "isReleased" to game.isReleased,
+                        "platforms" to game.platforms,
+                        "steamAppId" to game.steamAppId,
+                        "rating" to game.rating,
+                        "isFeatured" to game.isFeatured,
+                        "isTrending" to game.isTrending,
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                    
+                    val finalPrice = if (game.steamAppId != null && steamPrices.containsKey(game.steamAppId)) {
+                        steamPrices[game.steamAppId]
+                    } else {
+                        game.price
+                    }
+                    if (finalPrice != null) {
+                        data["price"] = finalPrice
+                    }
+
+                    batch.set(docRef, data, SetOptions.merge())
+                }
+                batch.commit().await()
+                Log.i("GameRepository", "Sincronizados ${domainGames.size} juegos de IGDB a Firestore.")
+            } catch (fsErr: Exception) {
+                Log.w("GameRepository", "Petición IGDB exitosa (${domainGames.size} juegos), pero fallo al guardar en Firestore (¿permisos?): ${fsErr.localizedMessage}")
+            }
+
             Result.success(domainGames.size)
         } catch (e: Exception) {
-            Log.e("GameRepository", "Error sincronizando catálogo con RAWG: ${e.localizedMessage}", e)
+            Log.e("GameRepository", "Error sincronizando catálogo con IGDB: ${e.localizedMessage}", e)
             Result.failure(e)
         }
     }

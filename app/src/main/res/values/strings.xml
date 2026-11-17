@@ -69,9 +69,9 @@
     <string name="profile_delete_account">Eliminar Cuenta</string>
     <string name="profile_logout">Cerrar Sesión</string>
     <string name="profile_dev_tools">Herramientas de Desarrollador</string>
-    <string name="profile_dev_sync_desc">Sincroniza el catálogo de RAWG API hacia Cloud Firestore.</string>
+    <string name="profile_dev_sync_desc">Sincroniza el catálogo de IGDB API hacia Cloud Firestore.</string>
     <string name="profile_dev_syncing">Sincronizando...</string>
-    <string name="profile_dev_sync_btn">Sincronizar catálogo con RAWG (Admin)</string>
+    <string name="profile_dev_sync_btn">Sincronizar catálogo con IGDB (Admin)</string>
 
     <!-- Discover -->
     <string name="discover_title">Descubrir</string>
@@ -97,9 +97,8 @@
 
     <!-- Game Card & Detail -->
     <string name="game_status_upcoming">Próximamente</string>
-    <string name="game_price_check">Consultar</string>
     <string name="game_price_free">Gratis</string>
-    <string name="game_price_format">%1$s €</string>
+    <string name="game_price_not_available">Precio no disponible</string>
 
     <!-- Game Detail Modal -->
     <string name="detail_genre">Género: %1$s</string>
@@ -113,6 +112,10 @@
     <string name="detail_cancel">Cancelar</string>
     <string name="detail_save_changes">Guardar Cambios</string>
     <string name="detail_publish_review">Publicar Reseña</string>
+    <string name="detail_more_info">Más Información ➔</string>
+    <string name="detail_close">Cerrar</string>
+    <string name="detail_community_reviews">Todas las Reseñas Comunitarias 💬</string>
+    <string name="detail_no_other_reviews">Aún no hay reseñas de otros jugadores.</string>
 
     <!-- Community -->
     <string name="community_title">Comunidad</string>
@@ -240,7 +243,8 @@
 
     <!-- Swipe -->
     <string name="swipe_empty_title">No hay juegos disponibles en el catálogo.</string>
-    <string name="swipe_empty_subtitle">Sincroniza el catálogo desde tu perfil (Admin).</string>
+    <string name="swipe_empty_subtitle">Sincroniza el catálogo desde tu perfil (Admin) o pulsa Cargar juegos.</string>
+    <string name="swipe_reload_button">Cargar juegos</string>
     <string name="swipe_saved_favorites">¡Guardado en favoritos!</string>
     <string name="swipe_undo_success">Deshecho y eliminado de favoritos</string>
     <string name="swipe_undo_empty">No hay historial para deshacer</string>

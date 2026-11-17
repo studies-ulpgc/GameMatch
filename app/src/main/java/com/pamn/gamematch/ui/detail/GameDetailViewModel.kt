@@ -40,19 +40,19 @@ class GameDetailViewModel(
                 val result = gameRepository.getSteamPrice(steamAppId)
                 result
                     .onSuccess { price ->
-                        val formatted = price ?: if (defaultPrice != null && defaultPrice > 0.0) "$defaultPrice €" else if (defaultPrice == 0.0) "Gratis" else "Consultar en tienda"
+                        val formatted = price ?: if (defaultPrice != null && defaultPrice > 0.0) com.pamn.gamematch.utils.PriceFormatter.formatPrice(defaultPrice) else if (defaultPrice == 0.0) "Gratis" else null
                         _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
                     }
                     .onFailure {
-                        val fallback = if (defaultPrice != null && defaultPrice > 0.0) "$defaultPrice €" else if (defaultPrice == 0.0) "Gratis" else "Consultar en tienda"
+                        val fallback = if (defaultPrice != null && defaultPrice > 0.0) com.pamn.gamematch.utils.PriceFormatter.formatPrice(defaultPrice) else if (defaultPrice == 0.0) "Gratis" else null
                         _uiState.update { it.copy(priceDisplay = fallback, isPriceLoading = false) }
                     }
             }
         } else {
             val formatted = when {
-                defaultPrice != null && defaultPrice > 0.0 -> "$defaultPrice €"
+                defaultPrice != null && defaultPrice > 0.0 -> com.pamn.gamematch.utils.PriceFormatter.formatPrice(defaultPrice)
                 defaultPrice == 0.0 -> "Gratis"
-                else -> "Precio no disponible"
+                else -> null
             }
             _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
         }

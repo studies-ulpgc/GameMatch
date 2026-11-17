@@ -355,12 +355,13 @@ fun DiscoverGameCard(
                 Text(
                     text = game.title,
                     style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = textColor
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = game.genre,
+                    text = com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(game.genre),
                     style = MaterialTheme.typography.bodySmall,
                     color = textColor.copy(alpha = 0.8f)
                 )
@@ -369,15 +370,21 @@ fun DiscoverGameCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val priceBadgeText = when {
+                        game.price != null && game.price > 0.0 -> com.pamn.gamematch.utils.PriceFormatter.formatPrice(game.price)
+                        game.price == 0.0 -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free)
+                        else -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_not_available)
+                    }
+
                     Surface(
                         color = SteamAccentBlue,
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = if (game.price == null || game.price == 0.0) "Gratis" else "${game.price} €",
+                            text = priceBadgeText,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Black
@@ -385,12 +392,13 @@ fun DiscoverGameCard(
                     }
 
                     if (!game.isReleased) {
+                        Spacer(modifier = Modifier.width(4.dp))
                         Surface(
                             color = UnreleasedBadgeColor,
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "Próximamente",
+                                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_status_upcoming),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White

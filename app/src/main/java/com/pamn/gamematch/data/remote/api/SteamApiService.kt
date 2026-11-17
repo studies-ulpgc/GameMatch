@@ -1,5 +1,6 @@
 package com.pamn.gamematch.data.remote.api
 
+import com.google.gson.JsonElement
 import com.pamn.gamematch.data.remote.dto.steam.SteamAppContainerDto
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -11,4 +12,11 @@ interface SteamApiService {
         @Query("cc") countryCode: String = "es",
         @Query("filters") filters: String = "price_overview"
     ): Map<String, SteamAppContainerDto>
+
+    @GET("api/appdetails")
+    suspend fun getAppDetailsBatch(
+        @Query("appids") appIds: String,
+        @Query("cc") countryCode: String = "es",
+        @Query("filters") filters: String = "price_overview"
+    ): Map<String, JsonElement>
 }

@@ -52,7 +52,7 @@ fun ProfileScreen(
         val authRepository = remember { AuthRepository() }
         val user = auth.currentUser
         val coroutineScope = rememberCoroutineScope()
-        var isSyncingRawg by remember { mutableStateOf(false) }
+        var isSyncingIgdb by remember { mutableStateOf(false) }
 
         val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
         val minValidYear = currentYear - 120
@@ -528,23 +528,23 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Button(
                                     onClick = {
-                                        isSyncingRawg = true
+                                        isSyncingIgdb = true
                                         coroutineScope.launch {
-                                            val result = gameRepository.syncCatalogFromRawg()
-                                            isSyncingRawg = false
+                                            val result = gameRepository.syncCatalogFromIgdb()
+                                            isSyncingIgdb = false
                                             result
                                                 .onSuccess { count ->
-                                                    Toast.makeText(context, "¡Éxito! Sincronizados $count juegos con RAWG.", Toast.LENGTH_LONG).show()
+                                                    Toast.makeText(context, "¡Éxito! Sincronizados $count juegos con IGDB.", Toast.LENGTH_LONG).show()
                                                 }
                                                 .onFailure { error ->
                                                     Toast.makeText(context, "Error: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
                                                 }
                                         }
                                     },
-                                    enabled = !isSyncingRawg,
+                                    enabled = !isSyncingIgdb,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    if (isSyncingRawg) {
+                                    if (isSyncingIgdb) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(18.dp),
                                             color = MaterialTheme.colorScheme.onPrimary,

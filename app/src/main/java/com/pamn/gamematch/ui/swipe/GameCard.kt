@@ -20,6 +20,7 @@ import coil.compose.AsyncImage
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import com.pamn.gamematch.ui.theme.UnreleasedBadgeColor
+import com.pamn.gamematch.utils.GenreUtils
 import kotlin.math.roundToInt
 
 @Composable
@@ -38,6 +39,12 @@ fun GameCard(
 
     // Ángulo de inclinación suave según el arrastre
     val rotation = (offsetX / 600f) * 15f
+
+    val priceBadgeText = when {
+        game.price != null && game.price > 0.0 -> com.pamn.gamematch.utils.PriceFormatter.formatPrice(game.price)
+        game.price == 0.0 -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free)
+        else -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_not_available)
+    }
 
     Box(
         modifier = modifier
@@ -107,51 +114,47 @@ fun GameCard(
                 .align(Alignment.BottomStart)
                 .padding(horizontal = 20.dp, vertical = 85.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = game.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = textColor
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = game.genre,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = textColor.copy(alpha = 0.8f)
-                    )
-                }
+            Text(
+                text = game.title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = textColor,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = GenreUtils.getLocalizedGenre(game.genre),
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor.copy(alpha = 0.8f)
+            )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (!game.isReleased) {
-                        Surface(
-                            color = UnreleasedBadgeColor,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_status_upcoming),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White
-                            )
-                        }
-                    }
+            Spacer(modifier = Modifier.height(6.dp))
 
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (!game.isReleased) {
                     Surface(
-                        color = SteamAccentBlue,
+                        color = UnreleasedBadgeColor,
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = if (game.price == null) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_check) else if (game.price == 0.0) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_format, game.price.toString()),
+                            text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_status_upcoming),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Black
+                            color = Color.White
                         )
                     }
+                }
+
+                Surface(
+                    color = SteamAccentBlue,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = priceBadgeText,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Black
+                    )
                 }
             }
         }

@@ -60,7 +60,8 @@ class CommunityViewModel(
 
     fun setRoomFilter(filter: RoomFilter) {
         _uiState.update { it.copy(roomFilter = filter) }
-        applyRoomFilters()
+        loadFollowingUserIds()
+        loadRooms()
     }
 
     fun onSearchGameQueryChanged(query: String) {
@@ -179,18 +180,18 @@ class CommunityViewModel(
         val likedTitles = state.likedGameTitles
 
         val filtered = state.rooms.filter { room ->
-            // Excluir salas propias de la pestaña principal "Salas de Juego" (se gestionan en la pestaña "Mis Salas")
-            val isNotOwnRoom = room.hostId != currentUid
-
-            // Regla de visibilidad: si es solo para seguidos, el usuario actual debe seguir al host
+            val isOwnRoom = room.hostId == currentUid
             val isFollowingHost = room.hostId in following
-            val isVisible = !room.isFollowersOnly || isFollowingHost
+            val isMember = room.members.contains(currentUid)
+
+            // Visibilidad: La sala es visible si NO es solo seguidos, O si sigues al host, O si es tu propia sala, O si eres miembro
+            val isVisible = !room.isFollowersOnly || isFollowingHost || isOwnRoom || isMember
 
             // Regla de filtro activo en la pestaña:
             val passesChipFilter = when (filterMode) {
-                RoomFilter.ALL -> true
-                RoomFilter.FOLLOWING_ONLY -> isFollowingHost
-                RoomFilter.FAVORITES_ONLY -> likedTitles.any { title ->
+                RoomFilter.ALL -> !isOwnRoom
+                RoomFilter.FOLLOWING_ONLY -> isFollowingHost || room.isFollowersOnly
+                RoomFilter.FAVORITES_ONLY -> !isOwnRoom && likedTitles.any { title ->
                     title.equals(room.gameTitle, ignoreCase = true) || room.gameTitle.contains(title, ignoreCase = true)
                 }
             }
@@ -200,7 +201,7 @@ class CommunityViewModel(
                     room.gameTitle.contains(searchQuery, ignoreCase = true) ||
                     room.description.contains(searchQuery, ignoreCase = true)
 
-            isNotOwnRoom && isVisible && passesChipFilter && matchesSearch
+            isVisible && passesChipFilter && matchesSearch
         }
 
         _uiState.update { it.copy(filteredRooms = filtered) }
@@ -232,7 +233,7 @@ class CommunityViewModel(
                             successMessage = msg
                         )
                     }
-                    applyRoomFilters()
+                    loadRooms()
                 }
                 .onFailure { error ->
                     _uiState.update { state ->

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +31,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +47,7 @@ import com.pamn.gamematch.data.repository.GameRepository
 import com.pamn.gamematch.ui.detail.GameDetailModal
 import com.pamn.gamematch.ui.theme.LikeColor
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
+import kotlinx.coroutines.launch
 
 @Composable
 fun SwipeScreen(
@@ -53,6 +56,7 @@ fun SwipeScreen(
     gameRepository: GameRepository? = if (LocalInspectionMode.current) null else remember { GameRepository() }
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val bgColor = MaterialTheme.colorScheme.background
 
     val isDarkTheme = MaterialTheme.colorScheme.background.red < 0.5f
@@ -66,22 +70,29 @@ fun SwipeScreen(
     var isLoadingCatalog by remember { mutableStateOf(true) }
     var gameList by remember { mutableStateOf<List<Game>>(emptyList()) }
 
-    LaunchedEffect(Unit) {
+    fun loadCatalog() {
+        isLoadingCatalog = true
         if (gameRepository != null) {
-            val result = gameRepository.getGamesCatalog()
-            result
-                .onSuccess { catalog ->
-                    gameList = catalog
+            coroutineScope.launch {
+                val catalogResult = gameRepository.getGamesCatalog(pageSize = 50)
+                val catalog = catalogResult.getOrDefault(emptyList())
+
+                gameRepository.getLikedGames { likedResult ->
+                    val likedIds = likedResult.getOrDefault(emptyList()).toSet()
+                    val unlikedCatalog = catalog.filterNot { game -> likedIds.contains(game.id) }
+
+                    gameList = unlikedCatalog.ifEmpty { catalog }
                     isLoadingCatalog = false
                 }
-                .onFailure {
-                    gameList = emptyList()
-                    isLoadingCatalog = false
-                }
+            }
         } else {
             gameList = gameRepository?.getPreviewGames() ?: emptyList()
             isLoadingCatalog = false
         }
+    }
+
+    LaunchedEffect(Unit) {
+        loadCatalog()
     }
 
     var history by remember { mutableStateOf(listOf<Game>()) }
@@ -160,6 +171,12 @@ fun SwipeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { loadCatalog() }
+                    ) {
+                        Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.swipe_reload_button))
+                    }
                 }
             }
         }
@@ -282,7 +299,7 @@ fun SwipeScreen(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 360, heightDp = 600)
 @Composable
 fun SwipeScreenPreview() {
     SwipeScreen()

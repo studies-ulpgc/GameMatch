@@ -43,12 +43,12 @@ class DiscoverViewModel(
     fun loadData() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            val catalogResult = repository.getGamesCatalog()
+            val catalogResult = repository.getGamesCatalog(pageSize = 50)
             val catalog = catalogResult.getOrDefault(emptyList())
             allGamesCatalog = catalog
 
-            val featured = catalog.filter { it.isFeatured }
-            val trending = catalog.filter { it.isTrending }
+            val featured = catalog.filter { it.isFeatured }.ifEmpty { catalog }
+            val trending = catalog.filter { it.isTrending }.ifEmpty { catalog.reversed() }
 
             repository.getLikedGames { result ->
                 result
