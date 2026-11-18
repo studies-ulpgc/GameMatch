@@ -74,7 +74,7 @@ fun SwipeScreen(
         isLoadingCatalog = true
         if (gameRepository != null) {
             coroutineScope.launch {
-                val catalogResult = gameRepository.getGamesCatalog(pageSize = 50)
+                val catalogResult = gameRepository.getGamesCatalog(pageSize = 500)
                 val catalog = catalogResult.getOrDefault(emptyList())
 
                 gameRepository.getLikedGames { likedResult ->

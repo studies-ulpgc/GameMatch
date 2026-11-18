@@ -35,6 +35,12 @@ fun IgdbGameDto.toDomain(): Game {
     val normalizedRating = (rawRating / 20.0).let { Math.round(it * 10.0) / 10.0 }
     val finalRating = if (normalizedRating <= 0.0) 4.2 else normalizedRating
 
+    val (isFeaturedFlag, isTrendingFlag) = computeFlags(
+        rating = rating,
+        ratingCount = ratingCount,
+        firstReleaseDateSeconds = firstReleaseDate
+    )
+
     return Game(
         id = id.toString(),
         title = name,
@@ -47,7 +53,7 @@ fun IgdbGameDto.toDomain(): Game {
         platforms = mappedPlatforms,
         steamAppId = steamAppId,
         rating = finalRating,
-        isFeatured = finalRating >= 3.8,
-        isTrending = finalRating >= 3.5
+        isFeatured = isFeaturedFlag,
+        isTrending = isTrendingFlag
     )
 }

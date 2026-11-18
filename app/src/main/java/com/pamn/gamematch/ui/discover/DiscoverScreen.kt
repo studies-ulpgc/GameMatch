@@ -239,52 +239,56 @@ fun DiscoverScreen(
             }
         } else {
             // Carruseles horizontales (+ Destacado y + Trending)
-            item {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_featured),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(uiState.featuredGames, key = { it.id }) { game ->
-                        DiscoverGameCard(
-                            game = game,
-                            isLiked = uiState.likedGameIds.contains(game.id),
-                            onToggleFavorite = { viewModel.toggleFavorite(game.id) },
-                            onShowInfo = { selectedGameForModal = game },
-                            modifier = Modifier
-                                .width(200.dp)
-                                .height(270.dp)
-                        )
+            if (uiState.featuredGames.isNotEmpty()) {
+                item {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_featured),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(uiState.featuredGames, key = { it.id }) { game ->
+                            DiscoverGameCard(
+                                game = game,
+                                isLiked = uiState.likedGameIds.contains(game.id),
+                                onToggleFavorite = { viewModel.toggleFavorite(game.id) },
+                                onShowInfo = { selectedGameForModal = game },
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(270.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            item {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_trending),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(uiState.trendingGames, key = { it.id }) { game ->
-                        DiscoverGameCard(
-                            game = game,
-                            isLiked = uiState.likedGameIds.contains(game.id),
-                            onToggleFavorite = { viewModel.toggleFavorite(game.id) },
-                            onShowInfo = { selectedGameForModal = game },
-                            modifier = Modifier
-                                .width(200.dp)
-                                .height(270.dp)
-                        )
+            if (uiState.trendingGames.isNotEmpty()) {
+                item {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_trending),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(uiState.trendingGames, key = { it.id }) { game ->
+                            DiscoverGameCard(
+                                game = game,
+                                isLiked = uiState.likedGameIds.contains(game.id),
+                                onToggleFavorite = { viewModel.toggleFavorite(game.id) },
+                                onShowInfo = { selectedGameForModal = game },
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(270.dp)
+                            )
+                        }
                     }
                 }
             }

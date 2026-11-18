@@ -145,9 +145,22 @@ class GameRepository {
         }
 
         return try {
-            val query = "fields name, summary, rating, genres.name, platforms.name, cover.image_id, screenshots.image_id, first_release_date, external_games.external_game_source, external_games.category, external_games.uid, external_games.url; where cover != null & rating != null; sort rating desc; limit $limit; offset 0;"
-            val igdbDtos = RetrofitClient.igdbApiService.getGames(query)
-            val domainGames = igdbDtos.map { it.toDomain() }
+            val nowSeconds = System.currentTimeMillis() / 1000L
+            val oneYearAgoSeconds = nowSeconds - (365L * 24 * 3600)
+
+            val queryA = "fields name, summary, rating, rating_count, total_rating_count, follows, hypes, first_release_date, cover.image_id, screenshots.image_id, platforms.name, genres.name, external_games.external_game_source, external_games.category, external_games.uid, external_games.url; where cover != null & rating != null & rating_count >= 15; sort rating_count desc; limit $limit; offset 0;"
+            val queryB = "fields name, summary, rating, rating_count, total_rating_count, follows, hypes, first_release_date, cover.image_id, screenshots.image_id, platforms.name, genres.name, external_games.external_game_source, external_games.category, external_games.uid, external_games.url; where cover != null & rating != null & rating_count >= 3 & first_release_date >= $oneYearAgoSeconds & first_release_date <= $nowSeconds; sort rating_count desc; limit 60; offset 0;"
+
+            val dtosA = RetrofitClient.igdbApiService.getGames(queryA)
+            val dtosB = try {
+                RetrofitClient.igdbApiService.getGames(queryB)
+            } catch (e: Exception) {
+                Log.w("GameRepository", "Error consultando Query B de IGDB: ${e.localizedMessage}", e)
+                emptyList()
+            }
+
+            val combinedDtos = (dtosA + dtosB).distinctBy { it.id }
+            val domainGames = combinedDtos.map { it.toDomain() }
 
             if (domainGames.isEmpty()) {
                 return Result.failure(IllegalStateException("IGDB API no devolvió ningún juego"))

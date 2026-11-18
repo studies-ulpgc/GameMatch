@@ -13,6 +13,7 @@ data class IgdbGameDto(
     @SerializedName("name") val name: String = "",
     @SerializedName("summary") val summary: String? = null,
     @SerializedName("rating") val rating: Double? = null,
+    @SerializedName("rating_count") val ratingCount: Int? = null,
     @SerializedName("first_release_date") val firstReleaseDate: Long? = null,
     @SerializedName("cover") val cover: IgdbImageDto? = null,
     @SerializedName("screenshots") val screenshots: List<IgdbImageDto>? = null,
