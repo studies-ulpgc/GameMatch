@@ -126,18 +126,24 @@ fun DiscoverScreen(
             )
         }
 
-        // 2. Filtros de Plataformas (Chips) con selección múltiple
+        // 2. Filtros de Géneros (Chips) con selección múltiple
         item {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(PLATFORM_OPTIONS) { platform ->
-                    val isSelected = uiState.selectedPlatforms.contains(platform)
+                items(uiState.availableGenres) { genre ->
+                    val isSelected = uiState.selectedGenres.contains(genre)
+                    val labelText = if (genre == "Todas") {
+                        androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_platform_all)
+                    } else {
+                        com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(genre)
+                    }
+
                     FilterChip(
                         selected = isSelected,
-                        onClick = { viewModel.onPlatformSelected(platform) },
-                        label = { Text(if (platform == "Todas") androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_platform_all) else platform) },
+                        onClick = { viewModel.onGenreSelected(genre) },
+                        label = { Text(labelText) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
