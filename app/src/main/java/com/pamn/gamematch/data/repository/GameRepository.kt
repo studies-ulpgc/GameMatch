@@ -6,6 +6,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.pamn.gamematch.BuildConfig
+import com.pamn.gamematch.data.local.GameDao
+import com.pamn.gamematch.data.local.mapper.toDomain
+import com.pamn.gamematch.data.local.mapper.toEntity
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.model.GameReview
 import com.pamn.gamematch.data.model.User
@@ -16,6 +19,13 @@ import kotlinx.coroutines.tasks.await
 class GameRepository {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+
+    private val gameDao: GameDao?
+        get() = try {
+            com.pamn.gamematch.GameMatchApp.getDatabase()?.gameDao()
+        } catch (_: Exception) {
+            null
+        }
 
     companion object {
         const val GAMES_COLLECTION = "games_test"
@@ -84,8 +94,8 @@ class GameRepository {
     }
 
     /**
-     * Consulta el catálogo de juegos exclusivamente desde la colección de juegos en Cloud Firestore.
-     * Si la colección está vacía en Firestore, realiza una auto-sincronización inicial desde IGDB API.
+     * Consulta el catálogo de juegos utilizando caché local (Room) con estrategia de caducidad (24h),
+     * refrescando desde Cloud Firestore e IGDB cuando sea necesario.
      */
     suspend fun getGamesCatalog(
         page: Int = 1,
@@ -94,48 +104,87 @@ class GameRepository {
         genres: String? = null
     ): Result<List<Game>> {
         return try {
-            val snapshot = db.collection(GAMES_COLLECTION).limit(pageSize.toLong()).get().await()
-            var cachedGames = parseGamesFromSnapshot(snapshot)
+            val now = System.currentTimeMillis()
+            val cacheDurationMs = 24 * 3600 * 1000L
 
-            // Si la colección de juegos está vacía en Firestore, auto-sincronizar desde IGDB
-            if (cachedGames.isEmpty() && searchQuery.isNullOrBlank() && genres.isNullOrBlank()) {
-                Log.i("GameRepository", "La colección '$GAMES_COLLECTION' en Firestore está vacía. Sincronizando automáticamente desde IGDB...")
-                val syncResult = syncCatalogFromIgdb(limit = pageSize)
-                if (syncResult.isSuccess) {
-                    val newSnapshot = db.collection(GAMES_COLLECTION).limit(pageSize.toLong()).get().await()
-                    cachedGames = parseGamesFromSnapshot(newSnapshot)
+            var localEntities: List<com.pamn.gamematch.data.local.GameEntity> = emptyList()
+            try {
+                localEntities = gameDao?.getAll() ?: emptyList()
+            } catch (e: Exception) {
+                Log.w("GameRepository", "Error al consultar la BD local de Room: ${e.localizedMessage}")
+            }
+
+            val isCacheValid = localEntities.isNotEmpty() && (now - localEntities.maxOf { it.cachedAt }) <= cacheDurationMs
+
+            var catalogGames: List<Game> = if (isCacheValid) {
+                Log.i("GameRepository", "Cargados ${localEntities.size} juegos desde la caché local de Room (válida).")
+                localEntities.map { it.toDomain() }
+            } else {
+                var firestoreGames: List<Game> = emptyList()
+                try {
+                    val snapshot = db.collection(GAMES_COLLECTION).limit(pageSize.toLong()).get().await()
+                    firestoreGames = parseGamesFromSnapshot(snapshot)
+                } catch (fsErr: Exception) {
+                    Log.w("GameRepository", "Fallo al consultar Firestore durante el refresco: ${fsErr.localizedMessage}")
+                }
+
+                if (firestoreGames.isNotEmpty()) {
+                    Log.i("GameRepository", "Cargados ${firestoreGames.size} juegos desde Firestore. Actualizando Room...")
+                    try {
+                        gameDao?.upsertAll(firestoreGames.map { it.toEntity() })
+                    } catch (roomErr: Exception) {
+                        Log.w("GameRepository", "Error guardando catálogo en Room tras leer de Firestore: ${roomErr.localizedMessage}")
+                    }
+                    firestoreGames
+                } else if (localEntities.isNotEmpty()) {
+                    Log.i("GameRepository", "Firestore no disponible/vacío. Usando ${localEntities.size} juegos de Room como fallback.")
+                    localEntities.map { it.toDomain() }
+                } else {
+                    Log.i("GameRepository", "Sin datos en Room ni Firestore. Ejecutando sincronización desde IGDB...")
+                    val syncResult = syncCatalogFromIgdb(limit = pageSize)
+                    if (syncResult.isSuccess) {
+                        var syncedGames = emptyList<Game>()
+                        try {
+                            val newSnapshot = db.collection(GAMES_COLLECTION).limit(pageSize.toLong()).get().await()
+                            syncedGames = parseGamesFromSnapshot(newSnapshot)
+                            gameDao?.upsertAll(syncedGames.map { it.toEntity() })
+                        } catch (syncErr: Exception) {
+                            Log.w("GameRepository", "Error al leer Firestore/Room tras sincronización desde IGDB: ${syncErr.localizedMessage}")
+                        }
+                        if (syncedGames.isEmpty()) {
+                            syncedGames = gameDao?.getAll()?.map { it.toDomain() } ?: emptyList()
+                        }
+                        syncedGames
+                    } else {
+                        emptyList()
+                    }
                 }
             }
 
             if (!searchQuery.isNullOrBlank()) {
                 val q = searchQuery.trim()
-                cachedGames = cachedGames.filter {
+                catalogGames = catalogGames.filter {
                     it.title.contains(q, ignoreCase = true) || it.genre.contains(q, ignoreCase = true)
                 }
             }
 
             if (!genres.isNullOrBlank()) {
                 val g = genres.trim()
-                cachedGames = cachedGames.filter {
+                catalogGames = catalogGames.filter {
                     it.genre.contains(g, ignoreCase = true)
                 }
             }
 
-            if (cachedGames.isNotEmpty()) {
-                Log.i("GameRepository", "Cargados ${cachedGames.size} juegos desde Firestore.")
-                Result.success(cachedGames)
-            } else {
-                Log.i("GameRepository", "La colección '$GAMES_COLLECTION' en Firestore está vacía.")
-                Result.success(emptyList())
-            }
+            val paginated = catalogGames.take(pageSize)
+            Result.success(paginated)
         } catch (e: Exception) {
-            Log.e("GameRepository", "Error al consultar la colección '$GAMES_COLLECTION' en Firestore: ${e.localizedMessage}", e)
+            Log.e("GameRepository", "Error general en getGamesCatalog: ${e.localizedMessage}", e)
             Result.failure(e)
         }
     }
 
     /**
-     * Sincronización aislada desde IGDB API para alimentar la colección de juegos en Cloud Firestore.
+     * Sincronización aislada desde IGDB API para alimentar la colección de juegos en Cloud Firestore y Room.
      */
     suspend fun syncCatalogFromIgdb(limit: Int = 300): Result<Int> {
         val clientId = BuildConfig.IGDB_CLIENT_ID
@@ -200,9 +249,21 @@ class GameRepository {
                 }
             }
 
+            val finalDomainGames = domainGames.map { game ->
+                val price = if (game.steamAppId != null && steamPrices.containsKey(game.steamAppId)) {
+                    steamPrices[game.steamAppId]
+                } else {
+                    game.price
+                }
+                game.copy(price = price)
+            }
+
+            var firestoreSuccess = false
+            var firestoreError: Exception? = null
+
             try {
                 val batch = db.batch()
-                domainGames.forEach { game ->
+                finalDomainGames.forEach { game ->
                     val docRef = db.collection(GAMES_COLLECTION).document(game.id)
                     val data = hashMapOf<String, Any?>(
                         "title" to game.title,
@@ -221,25 +282,38 @@ class GameRepository {
                     if (game.ratingCount != null) {
                         data["ratingCount"] = game.ratingCount
                     }
-                    
-                    val finalPrice = if (game.steamAppId != null && steamPrices.containsKey(game.steamAppId)) {
-                        steamPrices[game.steamAppId]
-                    } else {
-                        game.price
-                    }
-                    if (finalPrice != null) {
-                        data["price"] = finalPrice
+                    if (game.price != null) {
+                        data["price"] = game.price
                     }
 
                     batch.set(docRef, data, SetOptions.merge())
                 }
                 batch.commit().await()
-                Log.i("GameRepository", "Sincronizados ${domainGames.size} juegos de IGDB a Firestore.")
+                firestoreSuccess = true
+                Log.i("GameRepository", "Sincronizados ${finalDomainGames.size} juegos de IGDB a Firestore.")
             } catch (fsErr: Exception) {
-                Log.w("GameRepository", "Petición IGDB exitosa (${domainGames.size} juegos), pero fallo al guardar en Firestore (¿permisos?): ${fsErr.localizedMessage}")
+                firestoreError = fsErr
+                Log.w("GameRepository", "Petición IGDB exitosa (${finalDomainGames.size} juegos), pero fallo al guardar en Firestore: ${fsErr.localizedMessage}")
             }
 
-            Result.success(domainGames.size)
+            var roomSuccess = false
+            var roomError: Exception? = null
+
+            try {
+                gameDao?.upsertAll(finalDomainGames.map { it.toEntity() })
+                roomSuccess = true
+                Log.i("GameRepository", "Guardados ${finalDomainGames.size} juegos en la base de datos local de Room.")
+            } catch (rErr: Exception) {
+                roomError = rErr
+                Log.w("GameRepository", "Fallo al guardar juegos en la base de datos local de Room: ${rErr.localizedMessage}")
+            }
+
+            if (firestoreSuccess || roomSuccess) {
+                Result.success(finalDomainGames.size)
+            } else {
+                val primaryErr = firestoreError ?: roomError ?: IllegalStateException("Fallo al guardar en Firestore y en Room")
+                Result.failure(primaryErr)
+            }
         } catch (e: Exception) {
             Log.e("GameRepository", "Error sincronizando catálogo con IGDB: ${e.localizedMessage}", e)
             Result.failure(e)
