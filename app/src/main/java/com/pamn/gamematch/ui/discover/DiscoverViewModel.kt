@@ -30,9 +30,6 @@ data class DiscoverUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 ) {
-    /** Deprecated property maintained for backwards compatibility. */
-    val selectedPlatforms: Set<String> get() = selectedGenres
-
     /** Indica si hay algún filtro o búsqueda activo para cambiar de carruseles a resultados filtrados. */
     val isFilteringActive: Boolean
         get() = searchQuery.isNotBlank() || !selectedGenres.contains("Todas") || maxPrice < 100.0
@@ -132,9 +129,6 @@ class DiscoverViewModel(
         }
         applyFilters()
     }
-
-    @Deprecated("Usar onGenreSelected", ReplaceWith("onGenreSelected(platform)"))
-    fun onPlatformSelected(platform: String) = onGenreSelected(platform)
 
     fun onMaxPriceChanged(price: Double) {
         _uiState.update { it.copy(maxPrice = price) }
