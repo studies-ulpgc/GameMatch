@@ -48,7 +48,7 @@ class DiscoverViewModel(
             allGamesCatalog = catalog
 
             val featured = catalog.filter { it.isFeatured }.sortedByDescending { it.rating }.take(15)
-            val trending = catalog.filter { it.isTrending }.sortedByDescending { it.rating }.take(15)
+            val trending = catalog.filter { it.isTrending }.sortedByDescending { it.ratingCount ?: 0 }.take(15)
 
             repository.getLikedGames { result ->
                 result

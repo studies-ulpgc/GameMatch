@@ -58,6 +58,7 @@ class GameRepository {
             val platforms = (doc.get("platforms") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
             val steamAppId = doc.getLong("steamAppId")?.toInt()
             val rating = doc.getDouble("rating") ?: 0.0
+            val ratingCount = doc.getLong("ratingCount")?.toInt()
             val isFeatured = doc.getBoolean("isFeatured") ?: false
             val isTrending = doc.getBoolean("isTrending") ?: false
 
@@ -74,6 +75,7 @@ class GameRepository {
                     platforms = platforms,
                     steamAppId = steamAppId,
                     rating = rating,
+                    ratingCount = ratingCount,
                     isFeatured = isFeatured,
                     isTrending = isTrending
                 )
@@ -202,7 +204,7 @@ class GameRepository {
                 val batch = db.batch()
                 domainGames.forEach { game ->
                     val docRef = db.collection(GAMES_COLLECTION).document(game.id)
-                    val data = hashMapOf(
+                    val data = hashMapOf<String, Any?>(
                         "title" to game.title,
                         "description" to game.description,
                         "imageUrl" to game.imageUrl,
@@ -216,6 +218,9 @@ class GameRepository {
                         "isTrending" to game.isTrending,
                         "updatedAt" to System.currentTimeMillis()
                     )
+                    if (game.ratingCount != null) {
+                        data["ratingCount"] = game.ratingCount
+                    }
                     
                     val finalPrice = if (game.steamAppId != null && steamPrices.containsKey(game.steamAppId)) {
                         steamPrices[game.steamAppId]

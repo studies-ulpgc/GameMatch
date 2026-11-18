@@ -53,6 +53,7 @@ fun IgdbGameDto.toDomain(): Game {
         platforms = mappedPlatforms,
         steamAppId = steamAppId,
         rating = finalRating,
+        ratingCount = ratingCount,
         isFeatured = isFeaturedFlag,
         isTrending = isTrendingFlag
     )

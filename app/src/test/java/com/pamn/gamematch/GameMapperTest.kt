@@ -41,4 +41,21 @@ class GameMapperTest {
         )
         assertNull(gameWithoutSteam.toDomain().steamAppId)
     }
+
+    @Test
+    fun testToDomain_ratingCountCopied() {
+        val dtoWithCount = IgdbGameDto(
+            id = 200L,
+            name = "Game With Rating Count",
+            ratingCount = 150
+        )
+        assertEquals(150, dtoWithCount.toDomain().ratingCount)
+
+        val dtoWithoutCount = IgdbGameDto(
+            id = 201L,
+            name = "Game Without Rating Count",
+            ratingCount = null
+        )
+        assertNull(dtoWithoutCount.toDomain().ratingCount)
+    }
 }
