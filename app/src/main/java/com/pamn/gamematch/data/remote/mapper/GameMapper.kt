@@ -10,9 +10,7 @@ fun IgdbGameDto.toDomain(): Game {
     val mappedGenres = genres?.mapNotNull { it.name.ifBlank { null } }?.joinToString(", ")
         ?.ifBlank { "Varios" } ?: "Varios"
 
-    val mappedPlatforms = platforms?.mapNotNull { it.name.ifBlank { null } }
-        ?.ifEmpty { listOf("PC", "PlayStation", "Xbox", "Nintendo") }
-        ?: listOf("PC", "PlayStation", "Xbox", "Nintendo")
+    val mappedPlatforms = platforms?.mapNotNull { it.name.ifBlank { null } } ?: emptyList()
 
     val formattedReleaseDate = if (firstReleaseDate != null && firstReleaseDate > 0) {
         val date = Date(firstReleaseDate * 1000L)
@@ -27,8 +25,10 @@ fun IgdbGameDto.toDomain(): Game {
     } ?: "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg"
 
     val steamAppId = externalGames
-        ?.firstOrNull { it.externalGameSource == 1 || it.category == 1 }
-        ?.uid?.toIntOrNull()
+        ?.filter { it.externalGameSource == 1 || it.category == 1 }
+        ?.firstNotNullOfOrNull { eg ->
+            eg.uid?.split(',')?.firstOrNull()?.trim()?.toIntOrNull()
+        }
 
     // IGDB rating es de 0 a 100. Escalar a formato 0.0 - 5.0 para GameMatch
     val rawRating = rating ?: 0.0

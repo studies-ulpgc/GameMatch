@@ -147,7 +147,8 @@ class DiscoverViewModel(
 
             val matchesPlatform = platforms.contains("Todas") ||
                     game.platforms.any { p ->
-                        platforms.any { sel -> sel.equals(p, ignoreCase = true) }
+                        val family = com.pamn.gamematch.utils.platformFamily(p)
+                        family != null && platforms.contains(family)
                     }
 
             val matchesPrice = (game.price ?: 0.0) <= maxPrice

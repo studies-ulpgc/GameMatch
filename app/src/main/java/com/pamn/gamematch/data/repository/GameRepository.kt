@@ -87,7 +87,7 @@ class GameRepository {
      */
     suspend fun getGamesCatalog(
         page: Int = 1,
-        pageSize: Int = 50,
+        pageSize: Int = 300,
         searchQuery: String? = null,
         genres: String? = null
     ): Result<List<Game>> {
@@ -135,7 +135,7 @@ class GameRepository {
     /**
      * Sincronización aislada desde IGDB API para alimentar la colección de juegos en Cloud Firestore.
      */
-    suspend fun syncCatalogFromIgdb(limit: Int = 40): Result<Int> {
+    suspend fun syncCatalogFromIgdb(limit: Int = 300): Result<Int> {
         val clientId = BuildConfig.IGDB_CLIENT_ID
         val clientSecret = BuildConfig.IGDB_CLIENT_SECRET
         if (clientId.isBlank() || clientSecret.isBlank()) {

@@ -169,6 +169,7 @@ private fun FavoriteGameGridCard(
     ) {
         GameCard(
             game = game,
+            compact = true,
             modifier = Modifier.fillMaxSize()
         )
 
