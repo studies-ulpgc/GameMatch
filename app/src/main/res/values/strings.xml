@@ -86,6 +86,13 @@
     <string name="discover_section_trending">+ Trending</string>
     <string name="discover_section_all">Todos los Juegos</string>
     <string name="discover_empty">No se encontraron juegos con estos filtros.</string>
+    <string name="discover_sort_title">Orden:</string>
+    <string name="discover_sort_relevance">Relevancia</string>
+    <string name="discover_sort_price_asc">Precio: de menor a mayor</string>
+    <string name="discover_sort_price_desc">Precio: de mayor a menor</string>
+    <string name="discover_sort_rating">Mejor valorados</string>
+    <string name="discover_sort_votes">Más populares</string>
+    <string name="discover_sort_newest">Más recientes</string>
     <!-- Favorites -->
     <string name="favorites_title">Mis Favoritos</string>
     <string name="favorites_empty">Aún no tienes matches</string>

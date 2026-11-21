@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -180,6 +183,75 @@ fun DiscoverScreen(
                     steps = 19,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
+
+        // 4. Selector de Ordenamiento
+        item {
+            var expanded by remember { mutableStateOf(false) }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_sort_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Box {
+                    val sortLabelRes = when (uiState.sortOption) {
+                        com.pamn.gamematch.utils.SortOption.RELEVANCE -> com.pamn.gamematch.R.string.discover_sort_relevance
+                        com.pamn.gamematch.utils.SortOption.PRICE_ASC -> com.pamn.gamematch.R.string.discover_sort_price_asc
+                        com.pamn.gamematch.utils.SortOption.PRICE_DESC -> com.pamn.gamematch.R.string.discover_sort_price_desc
+                        com.pamn.gamematch.utils.SortOption.RATING -> com.pamn.gamematch.R.string.discover_sort_rating
+                        com.pamn.gamematch.utils.SortOption.VOTES -> com.pamn.gamematch.R.string.discover_sort_votes
+                        com.pamn.gamematch.utils.SortOption.NEWEST -> com.pamn.gamematch.R.string.discover_sort_newest
+                    }
+
+                    FilterChip(
+                        selected = uiState.sortOption != com.pamn.gamematch.utils.SortOption.RELEVANCE,
+                        onClick = { expanded = true },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(androidx.compose.ui.res.stringResource(sortLabelRes))
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowDropDown,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        com.pamn.gamematch.utils.SortOption.entries.forEach { option ->
+                            val labelRes = when (option) {
+                                com.pamn.gamematch.utils.SortOption.RELEVANCE -> com.pamn.gamematch.R.string.discover_sort_relevance
+                                com.pamn.gamematch.utils.SortOption.PRICE_ASC -> com.pamn.gamematch.R.string.discover_sort_price_asc
+                                com.pamn.gamematch.utils.SortOption.PRICE_DESC -> com.pamn.gamematch.R.string.discover_sort_price_desc
+                                com.pamn.gamematch.utils.SortOption.RATING -> com.pamn.gamematch.R.string.discover_sort_rating
+                                com.pamn.gamematch.utils.SortOption.VOTES -> com.pamn.gamematch.R.string.discover_sort_votes
+                                com.pamn.gamematch.utils.SortOption.NEWEST -> com.pamn.gamematch.R.string.discover_sort_newest
+                            }
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(labelRes)) },
+                                onClick = {
+                                    viewModel.onSortSelected(option)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
 

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.repository.GameRepository
+import com.pamn.gamematch.utils.SortOption
+import com.pamn.gamematch.utils.sortGames
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +25,7 @@ data class DiscoverUiState(
     val selectedGenres: Set<String> = setOf("Todas"),
     val availableGenres: List<String> = listOf("Todas"),
     val maxPrice: Double = 100.0,
+    val sortOption: SortOption = SortOption.RELEVANCE,
     val featuredGames: List<Game> = emptyList(),
     val trendingGames: List<Game> = emptyList(),
     val filteredGames: List<Game> = emptyList(),
@@ -32,7 +35,7 @@ data class DiscoverUiState(
 ) {
     /** Indica si hay algún filtro o búsqueda activo para cambiar de carruseles a resultados filtrados. */
     val isFilteringActive: Boolean
-        get() = searchQuery.isNotBlank() || !selectedGenres.contains("Todas") || maxPrice < 100.0
+        get() = searchQuery.isNotBlank() || !selectedGenres.contains("Todas") || maxPrice < 100.0 || sortOption != SortOption.RELEVANCE
 }
 
 class DiscoverViewModel(
@@ -135,6 +138,11 @@ class DiscoverViewModel(
         applyFilters()
     }
 
+    fun onSortSelected(option: SortOption) {
+        _uiState.update { it.copy(sortOption = option) }
+        applyFilters()
+    }
+
     /** Añade o quita un juego de favoritos en Firestore y actualiza el estado. */
     fun toggleFavorite(gameId: String) {
         val isCurrentlyLiked = _uiState.value.likedGameIds.contains(gameId)
@@ -179,6 +187,8 @@ class DiscoverViewModel(
             matchesQuery && matchesGenre && matchesPrice
         }
 
-        _uiState.update { it.copy(filteredGames = filtered) }
+        val sorted = sortGames(filtered, state.sortOption)
+
+        _uiState.update { it.copy(filteredGames = sorted) }
     }
 }

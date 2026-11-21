@@ -86,6 +86,13 @@
     <string name="discover_section_trending">+ Trending</string>
     <string name="discover_section_all">All Games</string>
     <string name="discover_empty">No games match your search.</string>
+    <string name="discover_sort_title">Sort by:</string>
+    <string name="discover_sort_relevance">Relevance</string>
+    <string name="discover_sort_price_asc">Price: Low to High</string>
+    <string name="discover_sort_price_desc">Price: High to Low</string>
+    <string name="discover_sort_rating">Top Rated</string>
+    <string name="discover_sort_votes">Most Popular</string>
+    <string name="discover_sort_newest">Newest</string>
     <!-- Favorites -->
     <string name="favorites_title">My Favorites</string>
     <string name="favorites_empty">You don\'t have any matches yet</string>
