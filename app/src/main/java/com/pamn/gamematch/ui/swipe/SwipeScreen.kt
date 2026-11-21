@@ -79,10 +79,28 @@ fun SwipeScreen(
 
                 gameRepository.getLikedGames { likedResult ->
                     val likedIds = likedResult.getOrDefault(emptyList()).toSet()
-                    val unlikedCatalog = catalog.filterNot { game -> likedIds.contains(game.id) }
 
-                    gameList = unlikedCatalog.ifEmpty { catalog }
-                    isLoadingCatalog = false
+                    gameRepository.getUserPreferences { prefsResult ->
+                        prefsResult
+                            .onSuccess { userPrefs ->
+                                val recommended = com.pamn.gamematch.utils.recommendGames(
+                                    catalog = catalog,
+                                    preferredGenres = userPrefs.preferredGenres,
+                                    minPrice = userPrefs.minPrice.toDouble(),
+                                    maxPrice = userPrefs.maxPrice.toDouble(),
+                                    onlyReleased = userPrefs.onlyReleased,
+                                    likedIds = likedIds
+                                )
+                                gameList = recommended.ifEmpty { catalog }
+                                isLoadingCatalog = false
+                            }
+                            .onFailure { error ->
+                                android.util.Log.w("SwipeScreen", "Error al cargar preferencias de usuario, manteniendo comportamiento por defecto: ${error.localizedMessage}")
+                                val unlikedCatalog = catalog.filterNot { game -> likedIds.contains(game.id) }
+                                gameList = unlikedCatalog.ifEmpty { catalog }
+                                isLoadingCatalog = false
+                            }
+                    }
                 }
             }
         } else {

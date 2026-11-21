@@ -397,6 +397,23 @@ class GameRepository {
             .addOnFailureListener { onResult(Result.failure(it)) }
     }
 
+    fun getUserPreferences(onResult: (Result<User>) -> Unit) {
+        val userId = auth.currentUser?.uid
+            ?: return onResult(Result.failure(IllegalStateException("Usuario no autenticado")))
+
+        db.collection("users").document(userId)
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc != null && doc.exists()) {
+                    val user = doc.toObject(User::class.java) ?: User()
+                    onResult(Result.success(user))
+                } else {
+                    onResult(Result.success(User()))
+                }
+            }
+            .addOnFailureListener { onResult(Result.failure(it)) }
+    }
+
     fun saveUserPreferences(
         userModel: User,
         onResult: (Boolean) -> Unit
