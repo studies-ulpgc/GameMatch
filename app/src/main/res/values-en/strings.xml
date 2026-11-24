@@ -159,6 +159,12 @@
     <string name="community_room_join">Join room</string>
     <string name="community_room_leave">Leave room</string>
     <string name="community_empty_users">No other players found yet.</string>
+    <string name="community_empty_users_search">No players found matching \'%1$s\'.</string>
+    <string name="community_empty_users_following">You are not following any players yet.</string>
+    <string name="community_search_users_placeholder">Search player by name...</string>
+    <string name="community_search_users_cd">Search player</string>
+    <string name="community_user_filter_all">All</string>
+    <string name="community_user_filter_following">Following</string>
     <string name="community_user_language">Language: %1$s</string>
     <string name="community_user_following">Following</string>
     <string name="community_user_affinity">%1$d%% affinity with you</string>

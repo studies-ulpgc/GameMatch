@@ -159,6 +159,12 @@
     <string name="community_room_join">Unirse a la sala</string>
     <string name="community_room_leave">Salir de la sala</string>
     <string name="community_empty_users">No se encontraron otros jugadores todavía.</string>
+    <string name="community_empty_users_search">No se encontraron jugadores que coincidan con \'%1$s\'.</string>
+    <string name="community_empty_users_following">Aún no sigues a ningún jugador.</string>
+    <string name="community_search_users_placeholder">Buscar jugador por nombre...</string>
+    <string name="community_search_users_cd">Buscar jugador</string>
+    <string name="community_user_filter_all">Todos</string>
+    <string name="community_user_filter_following">Siguiendo</string>
     <string name="community_user_language">Idioma: %1$s</string>
     <string name="community_user_following">Siguiendo</string>
     <string name="community_user_affinity">%1$d%% de afinidad contigo</string>

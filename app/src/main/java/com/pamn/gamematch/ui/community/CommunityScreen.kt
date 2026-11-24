@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -88,6 +89,7 @@ import com.pamn.gamematch.data.model.GameRoom
 import com.pamn.gamematch.data.model.UserProfile
 import com.pamn.gamematch.ui.discover.PLATFORM_OPTIONS
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
+import com.pamn.gamematch.utils.GenreUtils
 
 import com.pamn.gamematch.ui.AppViewModelProvider
 
@@ -221,6 +223,8 @@ fun CommunityScreen(
 
                 2 -> UserMatchTabContent(
                     uiState = uiState,
+                    onSearchQueryChange = viewModel::onSearchUserQueryChanged,
+                    onFilterChange = viewModel::setUserFilter,
                     onUserClick = { user -> selectedUserForModal = user },
                     onToggleFollow = viewModel::toggleFollowUser,
                     onRetry = viewModel::loadCommunityUsers
@@ -1014,53 +1018,135 @@ private fun RoomCard(
 @Composable
 private fun UserMatchTabContent(
     uiState: CommunityUiState,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterChange: (UserFilter) -> Unit,
     onUserClick: (UserProfile) -> Unit,
     onToggleFollow: (String) -> Unit,
     onRetry: () -> Unit
 ) {
-    if (uiState.isLoadingUsers) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-    } else if (uiState.userMatches.isEmpty()) {
-        Box(
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(uiState.userFilter, uiState.searchUserQuery) {
+        listState.scrollToItem(0)
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Buscador superior por usuario
+        OutlinedTextField(
+            value = uiState.searchUserQuery,
+            onValueChange = onSearchQueryChange,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = stringResource(R.string.community_empty_users),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = { Text(stringResource(R.string.community_search_users_placeholder)) },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(R.string.community_search_users_cd)
                 )
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.padding(top = 12.dp)
-                ) {
-                    Text(stringResource(R.string.community_retry))
+            },
+            trailingIcon = {
+                if (uiState.searchUserQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.community_clear_search_cd)
+                        )
+                    }
                 }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            )
+        )
+
+        // Chips de Filtro (Todos / Siguiendo)
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                FilterChip(
+                    selected = uiState.userFilter == UserFilter.ALL,
+                    onClick = { onFilterChange(UserFilter.ALL) },
+                    label = { Text(stringResource(R.string.community_user_filter_all)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
+            item {
+                FilterChip(
+                    selected = uiState.userFilter == UserFilter.FOLLOWING_ONLY,
+                    onClick = { onFilterChange(UserFilter.FOLLOWING_ONLY) },
+                    label = { Text(stringResource(R.string.community_user_filter_following)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
             }
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(uiState.userMatches, key = { it.uid }) { user ->
-                val isFollowing = uiState.followingUserIds.contains(user.uid)
-                UserMatchCard(
-                    user = user,
-                    isFollowing = isFollowing,
-                    isActionInProgress = uiState.isActionInProgress,
-                    onClick = { onUserClick(user) },
-                    onToggleFollow = { onToggleFollow(user.uid) }
-                )
+
+        if (uiState.isLoadingUsers) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (uiState.filteredUserMatches.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val emptyText = when {
+                        uiState.userFilter == UserFilter.FOLLOWING_ONLY ->
+                            stringResource(R.string.community_empty_users_following)
+                        uiState.searchUserQuery.isNotBlank() ->
+                            stringResource(R.string.community_empty_users_search, uiState.searchUserQuery)
+                        else ->
+                            stringResource(R.string.community_empty_users)
+                    }
+                    Text(
+                        text = emptyText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    Button(
+                        onClick = onRetry,
+                        modifier = Modifier.padding(top = 12.dp)
+                    ) {
+                        Text(stringResource(R.string.community_retry))
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(uiState.filteredUserMatches, key = { it.uid }) { user ->
+                    val isFollowing = uiState.followingUserIds.contains(user.uid)
+                    UserMatchCard(
+                        user = user,
+                        isFollowing = isFollowing,
+                        isActionInProgress = uiState.isActionInProgress,
+                        onClick = { onUserClick(user) },
+                        onToggleFollow = { onToggleFollow(user.uid) }
+                    )
+                }
             }
         }
     }
@@ -1191,7 +1277,7 @@ private fun UserMatchCard(
                         user.commonGenres.take(3).forEach { genre ->
                             AssistChip(
                                 onClick = {},
-                                label = { Text(genre, style = MaterialTheme.typography.labelSmall) }
+                                label = { Text(GenreUtils.getLocalizedGenre(genre), style = MaterialTheme.typography.labelSmall) }
                             )
                         }
                     }
@@ -1236,7 +1322,7 @@ private fun UserDetailModal(
                         text = stringResource(R.string.community_user_preferred_genres),
                         fontWeight = FontWeight.Bold
                     )
-                    Text(text = user.preferredGenres.joinToString(", "))
+                    Text(text = user.preferredGenres.map { GenreUtils.getLocalizedGenre(it) }.joinToString(", "))
                 }
             }
         },

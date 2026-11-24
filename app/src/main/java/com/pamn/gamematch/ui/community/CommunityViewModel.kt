@@ -21,9 +21,15 @@ enum class RoomFilter {
     FAVORITES_ONLY
 }
 
+enum class UserFilter {
+    ALL,
+    FOLLOWING_ONLY
+}
+
 data class CommunityUiState(
     val selectedTab: Int = 0, // 0: Salas de Juego, 1: Mis Salas, 2: Jugadores Afines
     val userMatches: List<UserProfile> = emptyList(),
+    val filteredUserMatches: List<UserProfile> = emptyList(),
     val currentUserProfile: UserProfile? = null,
     val rooms: List<GameRoom> = emptyList(),
     val filteredRooms: List<GameRoom> = emptyList(),
@@ -31,7 +37,9 @@ data class CommunityUiState(
     val followingUserIds: Set<String> = emptySet(),
     val likedGameTitles: Set<String> = emptySet(),
     val searchGameQuery: String = "",
+    val searchUserQuery: String = "",
     val roomFilter: RoomFilter = RoomFilter.ALL,
+    val userFilter: UserFilter = UserFilter.ALL,
     val isLoadingUsers: Boolean = false,
     val isLoadingRooms: Boolean = false,
     val isCreatingRoom: Boolean = false,
@@ -66,9 +74,19 @@ class CommunityViewModel(
         loadRooms()
     }
 
+    fun setUserFilter(filter: UserFilter) {
+        _uiState.update { it.copy(userFilter = filter) }
+        applyUserFilters()
+    }
+
     fun onSearchGameQueryChanged(query: String) {
         _uiState.update { it.copy(searchGameQuery = query) }
         applyRoomFilters()
+    }
+
+    fun onSearchUserQueryChanged(query: String) {
+        _uiState.update { it.copy(searchUserQuery = query) }
+        applyUserFilters()
     }
 
     fun loadCatalogGames() {
@@ -98,6 +116,7 @@ class CommunityViewModel(
             communityRepository.getFollowingUserIds().onSuccess { ids ->
                 _uiState.update { it.copy(followingUserIds = ids.toSet()) }
                 applyRoomFilters()
+                applyUserFilters()
             }
         }
     }
@@ -136,6 +155,7 @@ class CommunityViewModel(
                             isLoadingUsers = false
                         )
                     }
+                    applyUserFilters()
                 }
                 .onFailure { error ->
                     _uiState.update { state ->
@@ -211,6 +231,28 @@ class CommunityViewModel(
         _uiState.update { it.copy(filteredRooms = filtered) }
     }
 
+    private fun applyUserFilters() {
+        val state = _uiState.value
+        val query = state.searchUserQuery.trim()
+        val filterMode = state.userFilter
+        val following = state.followingUserIds
+
+        val filtered = state.userMatches.filter { user ->
+            val matchesQuery = query.isEmpty() || user.username.contains(query, ignoreCase = true)
+            val passesFilter = when (filterMode) {
+                UserFilter.ALL -> true
+                UserFilter.FOLLOWING_ONLY -> user.uid in following
+            }
+            matchesQuery && passesFilter
+        }.sortedWith(
+            compareByDescending<UserProfile> { it.matchPercentage }
+                .thenByDescending { it.commonGenres.size }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.username }
+        )
+
+        _uiState.update { it.copy(filteredUserMatches = filtered) }
+    }
+
     fun toggleFollowUser(targetUserId: String) {
         val isFollowing = _uiState.value.followingUserIds.contains(targetUserId)
         _uiState.update { it.copy(isActionInProgress = true) }
@@ -237,6 +279,7 @@ class CommunityViewModel(
                             successMessage = msg
                         )
                     }
+                    applyUserFilters()
                     loadRooms()
                 }
                 .onFailure { error ->
