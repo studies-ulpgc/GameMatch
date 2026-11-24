@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
@@ -23,7 +25,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = SteamLightAccentBlue, // Azul más oscuro para legibilidad en modo claro
+    primary = SteamLightAccentBlue,
     onPrimary = Color.White,
     secondary = SteamLightSurface,
     onSecondary = Color(0xFF171A21),
@@ -37,16 +39,26 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF4B5563)
 )
 
+object GameMatchTheme {
+    val semanticColors: SemanticColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalSemanticColors.current
+}
+
 @Composable
 fun GameMatchTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val semanticColors = if (darkTheme) DarkSemanticColors else LightSemanticColors
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalSemanticColors provides semanticColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

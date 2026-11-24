@@ -108,6 +108,8 @@
     <string name="game_price_not_available">Price not available</string>
 
     <!-- Game Detail Modal -->
+    <string name="detail_default_username">Player</string>
+    <string name="detail_rating_cd">Rating</string>
     <string name="detail_genre">Genre: %1$s</string>
     <string name="detail_steam_badge">Steam 🛒</string>
     <string name="detail_steam_button">View on Steam 🛒</string>
@@ -160,6 +162,7 @@
     <string name="community_user_language">Language: %1$s</string>
     <string name="community_user_following">Following</string>
     <string name="community_user_affinity">%1$d%% affinity with you</string>
+    <string name="community_user_match_percentage">%1$d%% match</string>
     <string name="community_user_birthyear">Birth year: %1$s</string>
     <string name="community_user_preferred_genres">Favorite genres:</string>
     <string name="community_user_default_name">Player Profile</string>
@@ -227,6 +230,10 @@
     <string name="profile_delete_account_dialog_desc">This action is permanent and will delete all your favorites and preferences from Firebase.</string>
     <string name="profile_confirm_delete">Confirm Delete</string>
     <string name="profile_account_deleted">Account deleted</string>
+    <string name="profile_sync_success">Success! Synchronized %1$d games with IGDB.</string>
+    <string name="profile_sync_error">Error synchronizing with IGDB</string>
+    <string name="profile_save_error">Error saving profile</string>
+    <string name="profile_delete_error">Error deleting account</string>
 
     <!-- Community Messages & Modals -->
     <string name="community_expand_games_cd">Expand games</string>
@@ -247,6 +254,29 @@
     <string name="community_create_room_error">Error creating room</string>
     <string name="community_update_room_error">Error updating room</string>
     <string name="community_delete_room_error">Error deleting room</string>
+    <string name="community_default_host_name">Host</string>
+
+    <string name="detail_error_comment_required">Please write a comment before publishing</string>
+    <string name="detail_review_published_success">Review published successfully!</string>
+    <string name="detail_review_publish_error">Error publishing review</string>
+    <string name="detail_review_updated_success">Review updated!</string>
+    <string name="detail_review_update_error">Error updating review</string>
+    <string name="detail_review_deleted_success">Review deleted</string>
+    <string name="detail_review_delete_error">Error deleting review</string>
+    <string name="detail_error_load_reviews">Error loading reviews</string>
+
+    <string name="favorites_error_load">Could not load your matches</string>
+
+    <string name="discover_error_load_favorites">Error loading favorites</string>
+
+    <string name="login_subtitle">Find your next favorite game</string>
+    <string name="auth_cd_toggle_password">Show or hide password</string>
+    <string name="detail_steam_open_error">Could not open the Steam store</string>
+    <string name="detail_star_cd">Star %1$d</string>
+    <string name="discover_search_cd">Search</string>
+    <string name="cd_remove_favorite">Remove from favorites</string>
+    <string name="cd_add_favorite">Add to favorites</string>
+    <string name="profile_edit_cd">Edit Profile</string>
 
     <!-- Swipe -->
     <string name="swipe_empty_title">No games available in the catalog.</string>

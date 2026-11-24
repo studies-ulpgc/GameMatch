@@ -2,9 +2,11 @@ package com.pamn.gamematch.ui.discover
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pamn.gamematch.R
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.repository.GameRepository
 import com.pamn.gamematch.utils.SortOption
+import com.pamn.gamematch.utils.UiText
 import com.pamn.gamematch.utils.sortGames
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +33,7 @@ data class DiscoverUiState(
     val filteredGames: List<Game> = emptyList(),
     val likedGameIds: Set<String> = emptySet(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 ) {
     /** Indica si hay algún filtro o búsqueda activo para cambiar de carruseles a resultados filtrados. */
     val isFilteringActive: Boolean
@@ -39,17 +41,13 @@ data class DiscoverUiState(
 }
 
 class DiscoverViewModel(
-    private val repository: GameRepository = GameRepository()
+    private val repository: GameRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverUiState())
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
 
     private var allGamesCatalog: List<Game> = emptyList()
-
-    init {
-        loadData()
-    }
 
     /** Carga inicial del catálogo desde Firestore y los favoritos desde el repositorio. */
     fun loadData() {
@@ -95,7 +93,8 @@ class DiscoverViewModel(
                                 featuredGames = featured,
                                 trendingGames = trending,
                                 isLoading = false,
-                                errorMessage = error.message ?: "Error al cargar favoritos"
+                                errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) }
+                                    ?: UiText.StringResource(R.string.discover_error_load_favorites)
                             )
                         }
                         applyFilters()

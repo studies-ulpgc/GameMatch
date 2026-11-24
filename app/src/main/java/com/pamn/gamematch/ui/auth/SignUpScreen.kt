@@ -1,6 +1,5 @@
 package com.pamn.gamematch.ui.auth
 
-import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,21 +14,49 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pamn.gamematch.R
+import com.pamn.gamematch.ui.AppViewModelProvider
+import com.pamn.gamematch.ui.theme.GameMatchTheme
 import com.pamn.gamematch.ui.theme.SoftErrorColor
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import com.pamn.gamematch.ui.theme.SteamDarkBg
+import com.pamn.gamematch.utils.ValidationUtils
 
 @Composable
 fun SignUpScreen(
-    viewModel: AuthViewModel = remember { AuthViewModel() },
     onSignUpSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    viewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.clearError()
+    }
+
+    SignUpScreenContent(
+        uiState = uiState,
+        onSignUp = { email, pass, confirmPass ->
+            viewModel.signUp(email, pass, confirmPass, onSignUpSuccess)
+        },
+        onClearError = viewModel::clearError,
+        onNavigateToLogin = onNavigateToLogin
+    )
+}
+
+@Composable
+fun SignUpScreenContent(
+    uiState: AuthUiState,
+    onSignUp: (String, String, String) -> Unit,
+    onClearError: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -47,15 +74,16 @@ fun SignUpScreen(
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
-    val isEmailValid = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+    val isEmailValid = ValidationUtils.isValidEmail(email)
     val isPasswordValid = password.length >= 6
     val isConfirmValid = confirmPassword.isNotEmpty() && confirmPassword == password
 
-    val passwordStrength = viewModel.getPasswordStrength(password)
+    val passwordStrength = ValidationUtils.calculatePasswordStrength(password)
+    val semanticColors = GameMatchTheme.semanticColors
     val strengthColor = when {
-        passwordStrength < 0.35f -> SoftErrorColor
-        passwordStrength < 0.7f -> Color(0xFFFFA000)
-        else -> Color(0xFF4CAF50)
+        passwordStrength < 0.35f -> semanticColors.passwordStrengthWeak
+        passwordStrength < 0.7f -> semanticColors.passwordStrengthMedium
+        else -> semanticColors.passwordStrengthStrong
     }
 
     Box(
@@ -65,8 +93,8 @@ fun SignUpScreen(
                 Brush.verticalGradient(
                     colors = listOf(
                         SteamDarkBg,
-                        Color(0xFF0E1015),
-                        Color(0xFF050608)
+                        semanticColors.authGradientMid,
+                        semanticColors.authGradientBottom
                     )
                 )
             ),
@@ -78,7 +106,7 @@ fun SignUpScreen(
                 .padding(24.dp),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF1E222B)
+                containerColor = semanticColors.authCardBg
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
@@ -89,12 +117,12 @@ fun SignUpScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_title),
+                    text = stringResource(id = R.string.signup_title),
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     ),
-                    color = Color.White
+                    color = semanticColors.authTextPrimary
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -104,36 +132,20 @@ fun SignUpScreen(
                     value = email,
                     onValueChange = {
                         email = it
-                        viewModel.clearError()
+                        onClearError()
                     },
-                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email)) },
+                    label = { Text(stringResource(id = R.string.login_email)) },
                     leadingIcon = {
                         Icon(Icons.Default.Email, contentDescription = null)
                     },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        errorTextColor = Color.White, // Texto blanco al fallar
-                        focusedBorderColor = SteamAccentBlue,
-                        unfocusedBorderColor = Color(0xFF3A3F4D),
-                        errorBorderColor = SoftErrorColor,
-                        focusedLabelColor = SteamAccentBlue,
-                        unfocusedLabelColor = Color(0xFFD1D5DB),
-                        errorLabelColor = SoftErrorColor,
-                        focusedLeadingIconColor = SteamAccentBlue,
-                        unfocusedLeadingIconColor = SteamAccentBlue,
-                        errorLeadingIconColor = SoftErrorColor,
-                        focusedContainerColor = Color(0xFF171A21),
-                        unfocusedContainerColor = Color(0xFF171A21),
-                        errorContainerColor = Color(0xFF171A21)
-                    ),
+                    colors = authTextFieldColors(),
                     isError = emailTouched && (email.isBlank() || !isEmailValid),
                     supportingText = {
                         if (emailTouched) {
                             when {
-                                email.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email_required), color = SoftErrorColor)
-                                !isEmailValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_email_invalid), color = SoftErrorColor)
+                                email.isBlank() -> Text(stringResource(id = R.string.login_email_required), color = SoftErrorColor)
+                                !isEmailValid -> Text(stringResource(id = R.string.signup_email_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -155,39 +167,20 @@ fun SignUpScreen(
                     value = password,
                     onValueChange = {
                         password = it
-                        viewModel.clearError()
+                        onClearError()
                     },
-                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password)) },
+                    label = { Text(stringResource(id = R.string.login_password)) },
                     leadingIcon = {
                         Icon(Icons.Default.Lock, contentDescription = null)
                     },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        errorTextColor = Color.White, // Texto blanco al fallar
-                        focusedBorderColor = SteamAccentBlue,
-                        unfocusedBorderColor = Color(0xFF3A3F4D),
-                        errorBorderColor = SoftErrorColor,
-                        focusedLabelColor = SteamAccentBlue,
-                        unfocusedLabelColor = Color(0xFFD1D5DB),
-                        errorLabelColor = SoftErrorColor,
-                        focusedLeadingIconColor = SteamAccentBlue,
-                        unfocusedLeadingIconColor = SteamAccentBlue,
-                        errorLeadingIconColor = SoftErrorColor,
-                        focusedTrailingIconColor = Color(0xFFD1D5DB),
-                        unfocusedTrailingIconColor = Color(0xFFD1D5DB),
-                        errorTrailingIconColor = SoftErrorColor,
-                        focusedContainerColor = Color(0xFF171A21),
-                        unfocusedContainerColor = Color(0xFF171A21),
-                        errorContainerColor = Color(0xFF171A21)
-                    ),
+                    colors = authTextFieldColors(),
                     visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                             Icon(
                                 imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Mostrar contraseña"
+                                contentDescription = stringResource(id = R.string.auth_cd_toggle_password)
                             )
                         }
                     },
@@ -195,8 +188,8 @@ fun SignUpScreen(
                     supportingText = {
                         if (passwordTouched) {
                             when {
-                                password.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password_required), color = SoftErrorColor)
-                                !isPasswordValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_password_invalid), color = SoftErrorColor)
+                                password.isBlank() -> Text(stringResource(id = R.string.login_password_required), color = SoftErrorColor)
+                                !isPasswordValid -> Text(stringResource(id = R.string.signup_password_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -229,39 +222,20 @@ fun SignUpScreen(
                     value = confirmPassword,
                     onValueChange = {
                         confirmPassword = it
-                        viewModel.clearError()
+                        onClearError()
                     },
-                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_confirm_password)) },
+                    label = { Text(stringResource(id = R.string.signup_confirm_password)) },
                     leadingIcon = {
                         Icon(Icons.Default.Lock, contentDescription = null)
                     },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        errorTextColor = Color.White, // Texto blanco al fallar
-                        focusedBorderColor = SteamAccentBlue,
-                        unfocusedBorderColor = Color(0xFF3A3F4D),
-                        errorBorderColor = SoftErrorColor,
-                        focusedLabelColor = SteamAccentBlue,
-                        unfocusedLabelColor = Color(0xFFD1D5DB),
-                        errorLabelColor = SoftErrorColor,
-                        focusedLeadingIconColor = SteamAccentBlue,
-                        unfocusedLeadingIconColor = SteamAccentBlue,
-                        errorLeadingIconColor = SoftErrorColor,
-                        focusedTrailingIconColor = Color(0xFFD1D5DB),
-                        unfocusedTrailingIconColor = Color(0xFFD1D5DB),
-                        errorTrailingIconColor = SoftErrorColor,
-                        focusedContainerColor = Color(0xFF171A21),
-                        unfocusedContainerColor = Color(0xFF171A21),
-                        errorContainerColor = Color(0xFF171A21)
-                    ),
+                    colors = authTextFieldColors(),
                     visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
                             Icon(
                                 imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Mostrar contraseña"
+                                contentDescription = stringResource(id = R.string.auth_cd_toggle_password)
                             )
                         }
                     },
@@ -269,8 +243,8 @@ fun SignUpScreen(
                     supportingText = {
                         if (confirmTouched) {
                             when {
-                                confirmPassword.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_confirm_password), color = SoftErrorColor)
-                                !isConfirmValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_confirm_password_invalid), color = SoftErrorColor)
+                                confirmPassword.isBlank() -> Text(stringResource(id = R.string.signup_confirm_password), color = SoftErrorColor)
+                                !isConfirmValid -> Text(stringResource(id = R.string.signup_confirm_password_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -287,7 +261,7 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                viewModel.errorMessage?.let { error ->
+                uiState.errorMessage?.let { error ->
                     Text(
                         text = error.asString(),
                         color = SoftErrorColor,
@@ -297,7 +271,7 @@ fun SignUpScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                if (viewModel.isLoading) {
+                if (uiState.isLoading) {
                     CircularProgressIndicator(color = SteamAccentBlue)
                 } else {
                     Button(
@@ -306,26 +280,26 @@ fun SignUpScreen(
                             passwordTouched = true
                             confirmTouched = true
                             if (isEmailValid && isPasswordValid && isConfirmValid) {
-                                viewModel.signUp(email, password, confirmPassword, onSignUpSuccess)
+                                onSignUp(email, password, confirmPassword)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = SteamAccentBlue,
-                            contentColor = Color.Black
+                            contentColor = semanticColors.authButtonText
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
                     ) {
-                        Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(id = R.string.signup_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 TextButton(onClick = onNavigateToLogin) {
-                    Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.signup_already_account), color = SteamAccentBlue)
+                    Text(stringResource(id = R.string.signup_already_account), color = SteamAccentBlue)
                 }
             }
         }
@@ -335,8 +309,10 @@ fun SignUpScreen(
 @Preview(showBackground = true)
 @Composable
 fun SignUpScreenPreview() {
-    SignUpScreen(
-        onSignUpSuccess = {},
+    SignUpScreenContent(
+        uiState = AuthUiState(),
+        onSignUp = { _, _, _ -> },
+        onClearError = {},
         onNavigateToLogin = {}
     )
 }

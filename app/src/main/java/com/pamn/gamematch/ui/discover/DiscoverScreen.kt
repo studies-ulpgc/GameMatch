@@ -53,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.pamn.gamematch.R
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,6 +64,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.ui.detail.GameDetailModal
+import com.pamn.gamematch.ui.AppViewModelProvider
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import com.pamn.gamematch.ui.theme.UnreleasedBadgeColor
 
@@ -71,7 +74,7 @@ val PLATFORM_OPTIONS = listOf("Todas", "Nintendo", "PlayStation", "Xbox", "PC")
 fun DiscoverScreen(
     modifier: Modifier = Modifier,
     onNavigateToFullDetails: (String) -> Unit = {},
-    viewModel: DiscoverViewModel = viewModel()
+    viewModel: DiscoverViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedGameForModal by remember { mutableStateOf<Game?>(null) }
@@ -103,11 +106,11 @@ fun DiscoverScreen(
                 value = uiState.searchQuery,
                 onValueChange = viewModel::onSearchQueryChanged,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_search_hint)) },
+                placeholder = { Text(stringResource(R.string.discover_search_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar"
+                        contentDescription = stringResource(R.string.discover_search_cd)
                     )
                 },
                 trailingIcon = {
@@ -115,7 +118,7 @@ fun DiscoverScreen(
                         IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_search_clear)
+                                contentDescription = stringResource(R.string.discover_search_clear)
                             )
                         }
                     }
@@ -523,7 +526,7 @@ fun DiscoverGameCard(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Favorite,
-                        contentDescription = if (isLiked) "Quitar de favoritos" else "Añadir a favoritos",
+                        contentDescription = if (isLiked) stringResource(R.string.cd_remove_favorite) else stringResource(R.string.cd_add_favorite),
                         tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier.size(20.dp)
                     )

@@ -10,9 +10,10 @@ data class UserSettings(
     val language: String = "es"
 )
 
-class SettingsRepository {
+class SettingsRepository(
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+) {
 
     fun getSettings(onResult: (UserSettings?) -> Unit) {
         val uid = auth.currentUser?.uid ?: return onResult(null)

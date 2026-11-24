@@ -1,6 +1,5 @@
 package com.pamn.gamematch.ui.auth
 
-import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,21 +14,49 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pamn.gamematch.R
+import com.pamn.gamematch.ui.AppViewModelProvider
+import com.pamn.gamematch.ui.theme.GameMatchTheme
 import com.pamn.gamematch.ui.theme.SoftErrorColor
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import com.pamn.gamematch.ui.theme.SteamDarkBg
+import com.pamn.gamematch.utils.ValidationUtils
 
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel = remember { AuthViewModel() },
     onLoginSuccess: () -> Unit,
+    onNavigateToSignUp: () -> Unit,
+    viewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.clearError()
+    }
+
+    LoginScreenContent(
+        uiState = uiState,
+        onLogin = { email, pass ->
+            viewModel.login(email, pass, onLoginSuccess)
+        },
+        onClearError = viewModel::clearError,
+        onNavigateToSignUp = onNavigateToSignUp
+    )
+}
+
+@Composable
+fun LoginScreenContent(
+    uiState: AuthUiState,
+    onLogin: (String, String) -> Unit,
+    onClearError: () -> Unit,
     onNavigateToSignUp: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -42,7 +69,8 @@ fun LoginScreen(
     var passwordHasFocused by remember { mutableStateOf(false) }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
-    val isEmailValid = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+    val isEmailValid = ValidationUtils.isValidEmail(email)
+    val semanticColors = GameMatchTheme.semanticColors
 
     Box(
         modifier = Modifier
@@ -51,8 +79,8 @@ fun LoginScreen(
                 Brush.verticalGradient(
                     colors = listOf(
                         SteamDarkBg,
-                        Color(0xFF0E1015),
-                        Color(0xFF050608)
+                        semanticColors.authGradientMid,
+                        semanticColors.authGradientBottom
                     )
                 )
             ),
@@ -64,7 +92,7 @@ fun LoginScreen(
                 .padding(24.dp),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF1E222B)
+                containerColor = semanticColors.authCardBg
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
@@ -75,17 +103,17 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.app_name),
+                    text = stringResource(id = R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     ),
-                    color = Color.White
+                    color = semanticColors.authTextPrimary
                 )
                 Text(
-                    text = "Encuentra tu próximo juego favorito",
+                    text = stringResource(id = R.string.login_subtitle),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFD1D5DB)
+                    color = semanticColors.authTextSecondary
                 )
 
                 Spacer(modifier = Modifier.height(28.dp))
@@ -95,36 +123,20 @@ fun LoginScreen(
                     value = email,
                     onValueChange = {
                         email = it
-                        viewModel.clearError()
+                        onClearError()
                     },
-                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email)) },
+                    label = { Text(stringResource(id = R.string.login_email)) },
                     leadingIcon = {
                         Icon(Icons.Default.Email, contentDescription = null)
                     },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        errorTextColor = Color.White, // Mantiene el texto en blanco al haber error
-                        focusedBorderColor = SteamAccentBlue,
-                        unfocusedBorderColor = Color(0xFF3A3F4D),
-                        errorBorderColor = SoftErrorColor,
-                        focusedLabelColor = SteamAccentBlue,
-                        unfocusedLabelColor = Color(0xFFD1D5DB),
-                        errorLabelColor = SoftErrorColor,
-                        focusedLeadingIconColor = SteamAccentBlue,
-                        unfocusedLeadingIconColor = SteamAccentBlue,
-                        errorLeadingIconColor = SoftErrorColor,
-                        focusedContainerColor = Color(0xFF171A21),
-                        unfocusedContainerColor = Color(0xFF171A21),
-                        errorContainerColor = Color(0xFF171A21)
-                    ),
+                    colors = authTextFieldColors(),
                     isError = emailTouched && (email.isBlank() || !isEmailValid),
                     supportingText = {
                         if (emailTouched) {
                             when {
-                                email.isBlank() -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email_required), color = SoftErrorColor)
-                                !isEmailValid -> Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_email_invalid), color = SoftErrorColor)
+                                email.isBlank() -> Text(stringResource(id = R.string.login_email_required), color = SoftErrorColor)
+                                !isEmailValid -> Text(stringResource(id = R.string.login_email_invalid), color = SoftErrorColor)
                             }
                         }
                     },
@@ -146,46 +158,27 @@ fun LoginScreen(
                     value = password,
                     onValueChange = {
                         password = it
-                        viewModel.clearError()
+                        onClearError()
                     },
-                    label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password)) },
+                    label = { Text(stringResource(id = R.string.login_password)) },
                     leadingIcon = {
                         Icon(Icons.Default.Lock, contentDescription = null)
                     },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        errorTextColor = Color.White, // Mantiene el texto en blanco al haber error
-                        focusedBorderColor = SteamAccentBlue,
-                        unfocusedBorderColor = Color(0xFF3A3F4D),
-                        errorBorderColor = SoftErrorColor,
-                        focusedLabelColor = SteamAccentBlue,
-                        unfocusedLabelColor = Color(0xFFD1D5DB),
-                        errorLabelColor = SoftErrorColor,
-                        focusedLeadingIconColor = SteamAccentBlue,
-                        unfocusedLeadingIconColor = SteamAccentBlue,
-                        errorLeadingIconColor = SoftErrorColor,
-                        focusedTrailingIconColor = Color(0xFFD1D5DB),
-                        unfocusedTrailingIconColor = Color(0xFFD1D5DB),
-                        errorTrailingIconColor = SoftErrorColor,
-                        focusedContainerColor = Color(0xFF171A21),
-                        unfocusedContainerColor = Color(0xFF171A21),
-                        errorContainerColor = Color(0xFF171A21)
-                    ),
+                    colors = authTextFieldColors(),
                     visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                             Icon(
                                 imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Mostrar contraseña"
+                                contentDescription = stringResource(id = R.string.auth_cd_toggle_password)
                             )
                         }
                     },
                     isError = passwordTouched && password.isBlank(),
                     supportingText = {
                         if (passwordTouched && password.isBlank()) {
-                            Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_password_required), color = SoftErrorColor)
+                            Text(stringResource(id = R.string.login_password_required), color = SoftErrorColor)
                         }
                     },
                     modifier = Modifier
@@ -201,7 +194,7 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                viewModel.errorMessage?.let { error ->
+                uiState.errorMessage?.let { error ->
                     Text(
                         text = error.asString(),
                         color = SoftErrorColor,
@@ -211,7 +204,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                if (viewModel.isLoading) {
+                if (uiState.isLoading) {
                     CircularProgressIndicator(color = SteamAccentBlue)
                 } else {
                     Button(
@@ -219,26 +212,26 @@ fun LoginScreen(
                             emailTouched = true
                             passwordTouched = true
                             if (email.isNotBlank() && isEmailValid && password.isNotBlank()) {
-                                viewModel.login(email, password, onLoginSuccess)
+                                onLogin(email, password)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = SteamAccentBlue,
-                            contentColor = Color.Black
+                            contentColor = semanticColors.authButtonText
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
                     ) {
-                        Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(id = R.string.login_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 TextButton(onClick = onNavigateToSignUp) {
-                    Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.login_no_account), color = SteamAccentBlue)
+                    Text(stringResource(id = R.string.login_no_account), color = SteamAccentBlue)
                 }
             }
         }
@@ -248,8 +241,10 @@ fun LoginScreen(
 @Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen(
-        onLoginSuccess = {},
+    LoginScreenContent(
+        uiState = AuthUiState(),
+        onLogin = { _, _ -> },
+        onClearError = {},
         onNavigateToSignUp = {}
     )
 }

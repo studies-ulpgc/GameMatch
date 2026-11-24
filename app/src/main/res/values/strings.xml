@@ -108,6 +108,8 @@
     <string name="game_price_not_available">Precio no disponible</string>
 
     <!-- Game Detail Modal -->
+    <string name="detail_default_username">Jugador</string>
+    <string name="detail_rating_cd">Puntuación</string>
     <string name="detail_genre">Género: %1$s</string>
     <string name="detail_steam_badge">Steam 🛒</string>
     <string name="detail_steam_button">Ver ficha oficial en Steam 🛒</string>
@@ -160,6 +162,7 @@
     <string name="community_user_language">Idioma: %1$s</string>
     <string name="community_user_following">Siguiendo</string>
     <string name="community_user_affinity">%1$d%% de afinidad contigo</string>
+    <string name="community_user_match_percentage">%1$d%% de coincidencia</string>
     <string name="community_user_birthyear">Año de nacimiento: %1$s</string>
     <string name="community_user_preferred_genres">Géneros favoritos:</string>
     <string name="community_user_default_name">Perfil de Jugador</string>
@@ -227,6 +230,10 @@
     <string name="profile_delete_account_dialog_desc">Esta acción es permanente y eliminará todos tus favoritos y preferencias de Firebase.</string>
     <string name="profile_confirm_delete">Confirmar Borrado</string>
     <string name="profile_account_deleted">Cuenta eliminada</string>
+    <string name="profile_sync_success">¡Éxito! Sincronizados %1$d juegos con IGDB.</string>
+    <string name="profile_sync_error">Error al sincronizar con IGDB</string>
+    <string name="profile_save_error">Error al guardar el perfil</string>
+    <string name="profile_delete_error">Error al eliminar la cuenta</string>
 
     <!-- Community Messages & Modals -->
     <string name="community_expand_games_cd">Desplegar juegos</string>
@@ -247,6 +254,29 @@
     <string name="community_create_room_error">Error al crear la sala</string>
     <string name="community_update_room_error">Error al actualizar la sala</string>
     <string name="community_delete_room_error">Error al eliminar la sala</string>
+    <string name="community_default_host_name">Anfitrión</string>
+
+    <string name="detail_error_comment_required">Escribe un comentario antes de publicar</string>
+    <string name="detail_review_published_success">¡Reseña publicada con éxito!</string>
+    <string name="detail_review_publish_error">Error al publicar la reseña</string>
+    <string name="detail_review_updated_success">¡Reseña actualizada!</string>
+    <string name="detail_review_update_error">Error al actualizar la reseña</string>
+    <string name="detail_review_deleted_success">Reseña eliminada</string>
+    <string name="detail_review_delete_error">Error al eliminar la reseña</string>
+    <string name="detail_error_load_reviews">Error al cargar las reseñas</string>
+
+    <string name="favorites_error_load">No se pudieron cargar tus matches</string>
+
+    <string name="discover_error_load_favorites">Error al cargar favoritos</string>
+
+    <string name="login_subtitle">Encuentra tu próximo juego favorito</string>
+    <string name="auth_cd_toggle_password">Mostrar u ocultar contraseña</string>
+    <string name="detail_steam_open_error">No se pudo abrir la tienda de Steam</string>
+    <string name="detail_star_cd">Estrella %1$d</string>
+    <string name="discover_search_cd">Buscar</string>
+    <string name="cd_remove_favorite">Quitar de favoritos</string>
+    <string name="cd_add_favorite">Añadir a favoritos</string>
+    <string name="profile_edit_cd">Editar Perfil</string>
 
     <!-- Swipe -->
     <string name="swipe_empty_title">No hay juegos disponibles en el catálogo.</string>

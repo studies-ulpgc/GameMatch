@@ -7,9 +7,15 @@ import androidx.compose.ui.res.stringResource
 
 sealed class UiText {
     data class DynamicString(val value: String) : UiText()
+
     class StringResource(
         @param:StringRes val resId: Int,
         vararg val args: Any
+    ) : UiText()
+
+    data class StringResourceWithSuffix(
+        @param:StringRes val resId: Int,
+        val suffix: String
     ) : UiText()
 
     @Composable
@@ -17,6 +23,7 @@ sealed class UiText {
         return when (this) {
             is DynamicString -> value
             is StringResource -> stringResource(resId, *args)
+            is StringResourceWithSuffix -> stringResource(resId) + suffix
         }
     }
 
@@ -24,6 +31,7 @@ sealed class UiText {
         return when (this) {
             is DynamicString -> value
             is StringResource -> context.getString(resId, *args)
+            is StringResourceWithSuffix -> context.getString(resId) + suffix
         }
     }
 }

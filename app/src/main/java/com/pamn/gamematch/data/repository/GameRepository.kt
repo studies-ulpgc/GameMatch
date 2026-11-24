@@ -16,19 +16,14 @@ import com.pamn.gamematch.data.remote.RetrofitClient
 import com.pamn.gamematch.data.remote.mapper.toDomain
 import kotlinx.coroutines.tasks.await
 
-class GameRepository {
-    private val db = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
-
-    private val gameDao: GameDao?
-        get() = try {
-            com.pamn.gamematch.GameMatchApp.getDatabase()?.gameDao()
-        } catch (_: Exception) {
-            null
-        }
+class GameRepository(
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val gameDao: GameDao? = null
+) {
 
     companion object {
-        const val GAMES_COLLECTION = "games_test"
+        val GAMES_COLLECTION: String get() = BuildConfig.GAMES_COLLECTION
     }
 
     /**
@@ -320,39 +315,7 @@ class GameRepository {
         }
     }
 
-    /**
-     * Método auxiliar de apoyo exclusivamente para previsualizaciones (@Preview) en Jetpack Compose.
-     */
-    fun getPreviewGames(): List<Game> {
-        return listOf(
-            Game(
-                id = "1",
-                title = "The Legend of Zelda: Tears of the Kingdom",
-                description = "Aventura épica de exploración e investigación en un vasto mundo abierto sobre las tierras y los cielos de Hyrule.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/header.jpg",
-                genre = "Aventura",
-                price = 59.99,
-                releaseDate = "Disponible",
-                isReleased = true,
-                platforms = listOf("Nintendo"),
-                isFeatured = true,
-                isTrending = false
-            ),
-            Game(
-                id = "2",
-                title = "GTA VI",
-                description = "Siguiente entrega de la aclamada franquicia de acción y crimen en un impresionante mundo abierto hiperrealista.",
-                imageUrl = "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
-                genre = "Acción",
-                price = 79.99,
-                releaseDate = "Lanzamiento: Otoño 2026",
-                isReleased = false,
-                platforms = listOf("PlayStation", "Xbox"),
-                isFeatured = true,
-                isTrending = true
-            )
-        )
-    }
+
 
     fun saveLikedGame(gameId: String, onResult: (Boolean) -> Unit) {
         val userId = auth.currentUser?.uid ?: return onResult(false)

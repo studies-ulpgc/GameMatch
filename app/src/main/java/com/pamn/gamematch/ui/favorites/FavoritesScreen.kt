@@ -41,12 +41,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pamn.gamematch.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.ui.detail.GameDetailModal
 import com.pamn.gamematch.ui.swipe.GameCard
+import com.pamn.gamematch.ui.AppViewModelProvider
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import kotlinx.coroutines.launch
 
@@ -54,7 +58,7 @@ import kotlinx.coroutines.launch
 fun FavoritesScreen(
     modifier: Modifier = Modifier,
     onNavigateToFullDetails: (String) -> Unit = {},
-    viewModel: FavoritesViewModel = viewModel()
+    viewModel: FavoritesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -97,7 +101,7 @@ fun FavoritesScreen(
                 is FavoritesUiState.Error -> CenteredBox {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.message,
+                            text = state.message.asString(),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
@@ -116,17 +120,16 @@ fun FavoritesScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(state.games, key = { it.id }) { game ->
-                        val context = androidx.compose.ui.platform.LocalContext.current
+                        val undoMsg = stringResource(R.string.favorites_undo)
+                        val removedMsg = stringResource(R.string.favorites_removed_msg, game.title)
                         FavoriteGameGridCard(
                             game = game,
                             onShowInfo = { selectedGameForModal = game },
                             onRemove = {
                                 viewModel.removeFavorite(game.id)
                                 coroutineScope.launch {
-                                    val msg = context.getString(com.pamn.gamematch.R.string.favorites_removed_msg, game.title)
-                                    val undoMsg = context.getString(com.pamn.gamematch.R.string.favorites_undo)
                                     val result = snackbarHostState.showSnackbar(
-                                        message = msg,
+                                        message = removedMsg,
                                         actionLabel = undoMsg,
                                         duration = SnackbarDuration.Short
                                     )

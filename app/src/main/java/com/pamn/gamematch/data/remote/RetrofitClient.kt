@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import com.pamn.gamematch.BuildConfig
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
 object RetrofitClient {
@@ -17,7 +18,11 @@ object RetrofitClient {
     private const val STEAM_BASE_URL = "https://store.steampowered.com/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BODY
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
     }
 
     val twitchAuthApiService: TwitchAuthApiService by lazy {

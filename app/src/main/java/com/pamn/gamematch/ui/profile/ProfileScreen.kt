@@ -16,25 +16,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pamn.gamematch.BuildConfig
-import com.pamn.gamematch.data.model.User
-import com.pamn.gamematch.data.repository.AuthRepository
-import com.pamn.gamematch.data.repository.GameRepository
-import com.pamn.gamematch.ui.auth.AuthViewModel
+import com.pamn.gamematch.R
+import com.pamn.gamematch.ui.AppViewModelProvider
 import com.pamn.gamematch.ui.components.AvatarSelectionDialog
 import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
-import kotlinx.coroutines.launch
+import com.pamn.gamematch.utils.GenreUtils
+import com.pamn.gamematch.utils.ValidationUtils
 import java.util.Calendar
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit = {},
@@ -42,43 +39,88 @@ fun ProfileScreen(
     isDarkModeGlobal: Boolean = true,
     onToggleDarkModeGlobal: (Boolean) -> Unit = {},
     currentLanguage: String = "es",
-    onChangeLanguage: (String) -> Unit = {}
+    onChangeLanguage: (String) -> Unit = {},
+    viewModel: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadProfile()
+    }
+
+    LaunchedEffect(uiState.userMessage) {
+        uiState.userMessage?.let { msg ->
+            Toast.makeText(context, msg.asString(context), Toast.LENGTH_SHORT).show()
+            viewModel.clearUserMessage()
+        }
+    }
+
+    ProfileScreenContent(
+        uiState = uiState,
+        onLogout = { viewModel.logout(onLogout) },
+        isDarkModeGlobal = isDarkModeGlobal,
+        onToggleDarkModeGlobal = onToggleDarkModeGlobal,
+        currentLanguage = currentLanguage,
+        onChangeLanguage = onChangeLanguage,
+        onToggleEditing = viewModel::toggleEditing,
+        onUsernameChanged = viewModel::onUsernameChanged,
+        onBirthYearChanged = viewModel::onBirthYearChanged,
+        onGenreToggled = viewModel::toggleGenre,
+        onPriceRangeChanged = viewModel::onPriceRangeChanged,
+        onOnlyReleasedChanged = viewModel::onOnlyReleasedChanged,
+        onAvatarSelected = viewModel::onAvatarSelected,
+        setShowAvatarSelector = viewModel::setShowAvatarSelector,
+        setShowPasswordDialog = viewModel::setShowPasswordDialog,
+        setShowDeleteDialog = viewModel::setShowDeleteDialog,
+        onSaveProfile = { minYear, maxYear ->
+            viewModel.saveProfile(minYear, maxYear, isDarkModeGlobal, currentLanguage)
+        },
+        onUpdatePassword = { newPass, onSuccess ->
+            viewModel.updatePassword(newPass, onSuccess)
+        },
+        onDeleteAccount = { viewModel.deleteAccount(onLogout) },
+        onSyncIgdb = viewModel::syncCatalogFromIgdb
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ProfileScreenContent(
+    uiState: ProfileUiState,
+    onLogout: () -> Unit = {},
+    isDarkModeGlobal: Boolean = true,
+    onToggleDarkModeGlobal: (Boolean) -> Unit = {},
+    currentLanguage: String = "es",
+    onChangeLanguage: (String) -> Unit = {},
+    onToggleEditing: () -> Unit = {},
+    onUsernameChanged: (String) -> Unit = {},
+    onBirthYearChanged: (String) -> Unit = {},
+    onGenreToggled: (String) -> Unit = {},
+    onPriceRangeChanged: (ClosedFloatingPointRange<Float>) -> Unit = {},
+    onOnlyReleasedChanged: (Boolean) -> Unit = {},
+    onAvatarSelected: (String) -> Unit = {},
+    setShowAvatarSelector: (Boolean) -> Unit = {},
+    setShowPasswordDialog: (Boolean) -> Unit = {},
+    setShowDeleteDialog: (Boolean) -> Unit = {},
+    onSaveProfile: (Int, Int) -> Unit = { _, _ -> },
+    onUpdatePassword: (String, () -> Unit) -> Unit = { _, _ -> },
+    onDeleteAccount: () -> Unit = {},
+    onSyncIgdb: () -> Unit = {}
 ) {
     GameMatchTheme(darkTheme = isDarkModeGlobal) {
-        val context = LocalContext.current
-        val auth = FirebaseAuth.getInstance()
-        val db = FirebaseFirestore.getInstance()
-        val gameRepository = remember { GameRepository() }
-        val authRepository = remember { AuthRepository() }
-        val user = auth.currentUser
-        val coroutineScope = rememberCoroutineScope()
-        var isSyncingIgdb by remember { mutableStateOf(false) }
-
         val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
         val minValidYear = currentYear - 120
         val maxValidYear = currentYear - 8
 
-        val availableGenres = com.pamn.gamematch.utils.GenreUtils.ALL_GENRES
+        val availableGenres = GenreUtils.ALL_GENRES
 
-        var isEditing by remember { mutableStateOf(false) }
-
-        var username by remember { mutableStateOf("") }
-        var selectedGenres by remember { mutableStateOf(setOf<String>()) }
-        var priceRange by remember { mutableStateOf(0f..70f) }
-        var onlyReleased by remember { mutableStateOf(true) }
-        var birthYear by remember { mutableStateOf("") }
-        var isLoading by remember { mutableStateOf(true) }
-
-        // Control de foco para validaciones
         var usernameTouched by remember { mutableStateOf(false) }
         var usernameHasFocused by remember { mutableStateOf(false) }
         var yearTouched by remember { mutableStateOf(false) }
         var yearHasFocused by remember { mutableStateOf(false) }
         var isUsernameFocused by remember { mutableStateOf(false) }
 
-        // Diálogos
-        var showPasswordDialog by remember { mutableStateOf(false) }
-        var showDeleteDialog by remember { mutableStateOf(false) }
         var newPasswordInput by remember { mutableStateOf("") }
         var confirmPasswordInput by remember { mutableStateOf("") }
 
@@ -90,50 +132,15 @@ fun ProfileScreen(
         var isPasswordVisible by remember { mutableStateOf(false) }
         var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
-        var profilePictureUrl by remember { mutableStateOf("https://api.dicebear.com/7.x/bottts/png?seed=default") }
-        var showAvatarSelector by remember { mutableStateOf(false) }
-
-        val isYearValid = remember(birthYear) {
-            if (birthYear.isEmpty()) true
-            else {
-                val yearNum = birthYear.toIntOrNull()
-                if (yearNum == null) false
-                else if (birthYear.length < 4) {
-                    val minPrefix = minValidYear.toString().take(birthYear.length).toInt()
-                    val maxPrefix = maxValidYear.toString().take(birthYear.length).toInt()
-                    yearNum in minPrefix..maxPrefix
-                } else {
-                    yearNum in minValidYear..maxValidYear
-                }
-            }
-        }
-
-        LaunchedEffect(user?.uid) {
-            user?.uid?.let { uid ->
-                db.collection("users").document(uid).get()
-                    .addOnSuccessListener { doc ->
-                        username = doc.getString("username") ?: ""
-                        val genresList = doc.get("preferredGenres") as? List<String>
-                        if (genresList != null) selectedGenres = genresList.toSet()
-
-                        val minP = doc.getDouble("minPrice")?.toFloat() ?: 0f
-                        val maxP = doc.getDouble("maxPrice")?.toFloat() ?: 70f
-                        priceRange = minP..maxP
-
-                        onlyReleased = doc.getBoolean("onlyReleased") ?: true
-                        birthYear = doc.getString("birthYear") ?: ""
-                        profilePictureUrl = doc.getString("profilePictureUrl") ?: "https://api.dicebear.com/7.x/bottts/png?seed=default"
-                        isLoading = false
-                    }
-                    .addOnFailureListener { isLoading = false }
-            }
+        val isYearValid = remember(uiState.birthYear) {
+            ValidationUtils.isBirthYearPrefixValid(uiState.birthYear, minValidYear, maxValidYear)
         }
 
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            if (isLoading) {
+            if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -144,7 +151,6 @@ fun ProfileScreen(
                         .padding(20.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Título y botón editar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -155,11 +161,11 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )
-                        IconButton(onClick = { isEditing = !isEditing }) {
+                        IconButton(onClick = onToggleEditing) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
-                                contentDescription = "Editar Perfil",
-                                tint = if (isEditing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                contentDescription = stringResource(R.string.profile_edit_cd),
+                                tint = if (uiState.isEditing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -171,13 +177,12 @@ fun ProfileScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         ProfileAvatar(
-                            imageUrl = profilePictureUrl,
-                            isEditing = isEditing,
-                            onClick = { showAvatarSelector = true }
+                            imageUrl = uiState.profilePictureUrl,
+                            isEditing = uiState.isEditing,
+                            onClick = { setShowAvatarSelector(true) }
                         )
                     }
 
-                    // Tarjeta de Ajustes Generales
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -246,8 +251,7 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    if (!isEditing) {
-                        // --- MODO LECTURA ---
+                    if (!uiState.isEditing) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -262,10 +266,10 @@ fun ProfileScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
 
-                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_username), value = if (username.isBlank()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_unspecified) else username)
-                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_email), value = user?.email ?: androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_not_available))
+                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_username), value = if (uiState.username.isBlank()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_unspecified) else uiState.username)
+                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_email), value = if (uiState.email.isBlank()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_not_available) else uiState.email)
                                 ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_password), value = "••••••••••••")
-                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_birthyear), value = if (birthYear.isBlank()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_unspecified) else birthYear)
+                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_birthyear), value = if (uiState.birthYear.isBlank()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_unspecified) else uiState.birthYear)
 
                                 HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 4.dp),
@@ -278,16 +282,15 @@ fun ProfileScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
 
-                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_price_range), value = "${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €")
-                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_released_only), value = if (onlyReleased) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_yes) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_no_upcoming))
-                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_genres), value = if (selectedGenres.isEmpty()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_all) else selectedGenres.map { com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(it) }.joinToString(", "))
+                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_price_range), value = "${uiState.priceRange.start.toInt()} € - ${uiState.priceRange.endInclusive.toInt()} €")
+                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_released_only), value = if (uiState.onlyReleased) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_yes) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_no_upcoming))
+                                ProfileInfoRow(label = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_genres), value = if (uiState.selectedGenres.isEmpty()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_all) else uiState.selectedGenres.map { GenreUtils.getLocalizedGenre(it) }.joinToString(", "))
                             }
                         }
                     } else {
-                        // --- MODO EDICIÓN ---
                         OutlinedTextField(
-                            value = username,
-                            onValueChange = { username = it },
+                            value = uiState.username,
+                            onValueChange = onUsernameChanged,
                             label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_username_label)) },
                             leadingIcon = {
                                 Icon(
@@ -297,9 +300,9 @@ fun ProfileScreen(
                                 )
                             },
                             singleLine = true,
-                            isError = usernameTouched && username.isBlank(),
+                            isError = usernameTouched && uiState.username.isBlank(),
                             supportingText = {
-                                if (usernameTouched && username.isBlank()) {
+                                if (usernameTouched && uiState.username.isBlank()) {
                                     Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_username_required))
                                 }
                             },
@@ -318,20 +321,15 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         OutlinedTextField(
-                            value = birthYear,
-                            onValueChange = { input ->
-                                if (input.all { it.isDigit() } && input.length <= 4) {
-                                    birthYear = input
-                                    yearTouched = true
-                                }
-                            },
+                            value = uiState.birthYear,
+                            onValueChange = onBirthYearChanged,
                             label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_birthyear_label, minValidYear, maxValidYear)) },
                             singleLine = true,
-                            isError = !isYearValid || (yearTouched && birthYear.isBlank()),
+                            isError = !isYearValid || (yearTouched && uiState.birthYear.isBlank()),
                             supportingText = {
-                                if ((yearTouched || birthYear.isNotEmpty()) && !isYearValid) {
+                                if ((yearTouched || uiState.birthYear.isNotEmpty()) && !isYearValid) {
                                     Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_birthyear_out_of_range, minValidYear, maxValidYear))
-                                } else if (yearTouched && birthYear.isBlank()) {
+                                } else if (yearTouched && uiState.birthYear.isBlank()) {
                                     Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_birthyear_required))
                                 }
                             },
@@ -354,14 +352,14 @@ fun ProfileScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_price_range_format, priceRange.start.toInt(), priceRange.endInclusive.toInt()),
+                                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_price_range_format, uiState.priceRange.start.toInt(), uiState.priceRange.endInclusive.toInt()),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 RangeSlider(
-                                    value = priceRange,
-                                    onValueChange = { priceRange = it },
+                                    value = uiState.priceRange,
+                                    onValueChange = onPriceRangeChanged,
                                     valueRange = 0f..100f,
                                     steps = 19
                                 )
@@ -370,7 +368,6 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Switch para incluir o excluir juegos sin estrenar
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -389,14 +386,14 @@ fun ProfileScreen(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = if (onlyReleased) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_released_only_desc_on) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_released_only_desc_off),
+                                        text = if (uiState.onlyReleased) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_released_only_desc_on) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_released_only_desc_off),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Switch(
-                                    checked = onlyReleased,
-                                    onCheckedChange = { onlyReleased = it }
+                                    checked = uiState.onlyReleased,
+                                    onCheckedChange = onOnlyReleasedChanged
                                 )
                             }
                         }
@@ -415,11 +412,9 @@ fun ProfileScreen(
                         ) {
                             availableGenres.forEach { genre ->
                                 FilterChip(
-                                    selected = selectedGenres.contains(genre),
-                                    onClick = {
-                                        selectedGenres = if (selectedGenres.contains(genre)) selectedGenres - genre else selectedGenres + genre
-                                    },
-                                    label = { Text(com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(genre)) },
+                                    selected = uiState.selectedGenres.contains(genre),
+                                    onClick = { onGenreToggled(genre) },
+                                    label = { Text(GenreUtils.getLocalizedGenre(genre)) },
                                     border = null
                                 )
                             }
@@ -431,40 +426,7 @@ fun ProfileScreen(
                             onClick = {
                                 usernameTouched = true
                                 yearTouched = true
-
-                                val yNum = birthYear.toIntOrNull()
-                                val validYear = yNum != null && yNum in minValidYear..maxValidYear
-
-                                if (username.isBlank() || birthYear.isBlank()) {
-                                    Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.profile_error_incomplete), Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-
-                                if (!validYear) {
-                                    Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.profile_error_invalid_year, minValidYear, maxValidYear), Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-
-                                val updatedUser = User(
-                                    uid = user?.uid ?: "",
-                                    email = user?.email ?: "",
-                                    username = username.trim(),
-                                    preferredGenres = selectedGenres.toList(),
-                                    minPrice = priceRange.start,
-                                    maxPrice = priceRange.endInclusive,
-                                    onlyReleased = onlyReleased,
-                                    birthYear = birthYear,
-                                    isDarkMode = isDarkModeGlobal,
-                                    language = currentLanguage,
-                                    profilePictureUrl = profilePictureUrl
-                                )
-
-                                gameRepository.saveUserPreferences(userModel = updatedUser) { success ->
-                                    if (success) {
-                                        isEditing = false
-                                        Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.profile_updated_success), Toast.LENGTH_SHORT).show()
-                                    }
-                                }
+                                onSaveProfile(minValidYear, maxValidYear)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -473,7 +435,6 @@ fun ProfileScreen(
                             Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_save_changes), style = MaterialTheme.typography.titleMedium)
                         }
 
-                        // --- ZONA DE ACCIONES DE CUENTA ---
                         Spacer(modifier = Modifier.height(24.dp))
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(16.dp))
@@ -490,14 +451,14 @@ fun ProfileScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             OutlinedButton(
-                                onClick = { showPasswordDialog = true },
+                                onClick = { setShowPasswordDialog(true) },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_change_password))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             OutlinedButton(
-                                onClick = { showDeleteDialog = true },
+                                onClick = { setShowDeleteDialog(true) },
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -527,24 +488,11 @@ fun ProfileScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Button(
-                                    onClick = {
-                                        isSyncingIgdb = true
-                                        coroutineScope.launch {
-                                            val result = gameRepository.syncCatalogFromIgdb()
-                                            isSyncingIgdb = false
-                                            result
-                                                .onSuccess { count ->
-                                                    Toast.makeText(context, "¡Éxito! Sincronizados $count juegos con IGDB.", Toast.LENGTH_LONG).show()
-                                                }
-                                                .onFailure { error ->
-                                                    Toast.makeText(context, "Error: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
-                                                }
-                                        }
-                                    },
-                                    enabled = !isSyncingIgdb,
+                                    onClick = onSyncIgdb,
+                                    enabled = !uiState.isSyncingIgdb,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    if (isSyncingIgdb) {
+                                    if (uiState.isSyncingIgdb) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(18.dp),
                                             color = MaterialTheme.colorScheme.onPrimary,
@@ -563,10 +511,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     Button(
-                        onClick = {
-                            auth.signOut()
-                            onLogout()
-                        },
+                        onClick = onLogout,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -580,22 +525,20 @@ fun ProfileScreen(
             }
         }
 
-        // --- DIÁLOGOS DE CONTRASEÑA Y ELIMINACIÓN ---
-        if (showPasswordDialog) {
-            val authViewModel = remember { AuthViewModel() }
+        if (uiState.showPasswordDialog) {
             val isNewPasswordValid = newPasswordInput.length >= 6
             val isConfirmPasswordValid = confirmPasswordInput.isNotEmpty() && confirmPasswordInput == newPasswordInput
 
-            val newPasswordStrength = authViewModel.getPasswordStrength(newPasswordInput)
+            val newPasswordStrength = ValidationUtils.calculatePasswordStrength(newPasswordInput)
             val strengthColor = when {
                 newPasswordStrength < 0.35f -> MaterialTheme.colorScheme.error
-                newPasswordStrength < 0.7f -> Color(0xFFFFA000)
-                else -> Color(0xFF4CAF50)
+                newPasswordStrength < 0.7f -> GameMatchTheme.semanticColors.passwordStrengthMedium
+                else -> GameMatchTheme.semanticColors.passwordStrengthStrong
             }
 
             AlertDialog(
                 onDismissRequest = {
-                    showPasswordDialog = false
+                    setShowPasswordDialog(false)
                     newPasswordTouched = false
                     confirmPasswordTouched = false
                 },
@@ -690,24 +633,18 @@ fun ProfileScreen(
                         confirmPasswordTouched = true
 
                         if (isNewPasswordValid && isConfirmPasswordValid) {
-                            authRepository.updatePassword(newPasswordInput) { success, err ->
-                                if (success) {
-                                    Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.profile_password_updated_success), Toast.LENGTH_SHORT).show()
-                                    showPasswordDialog = false
-                                    newPasswordInput = ""
-                                    confirmPasswordInput = ""
-                                    newPasswordTouched = false
-                                    confirmPasswordTouched = false
-                                } else {
-                                    Toast.makeText(context, err ?: context.resources.getString(com.pamn.gamematch.R.string.profile_password_update_error), Toast.LENGTH_SHORT).show()
-                                }
+                            onUpdatePassword(newPasswordInput) {
+                                newPasswordInput = ""
+                                confirmPasswordInput = ""
+                                newPasswordTouched = false
+                                confirmPasswordTouched = false
                             }
                         }
                     }) { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_save_changes)) }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        showPasswordDialog = false
+                        setShowPasswordDialog(false)
                         newPasswordTouched = false
                         confirmPasswordTouched = false
                     }) { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_cancel)) }
@@ -715,36 +652,27 @@ fun ProfileScreen(
             )
         }
 
-        if (showDeleteDialog) {
+        if (uiState.showDeleteDialog) {
             AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
+                onDismissRequest = { setShowDeleteDialog(false) },
                 title = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_delete_account_dialog_title)) },
                 text = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_delete_account_dialog_desc)) },
                 confirmButton = {
                     Button(
-                        onClick = {
-                            authRepository.deleteAccount { success, err ->
-                                if (success) {
-                                    Toast.makeText(context, context.resources.getString(com.pamn.gamematch.R.string.profile_account_deleted), Toast.LENGTH_SHORT).show()
-                                    onLogout()
-                                } else {
-                                    Toast.makeText(context, err ?: "Error", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
+                        onClick = onDeleteAccount,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.profile_confirm_delete)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_cancel)) }
+                    TextButton(onClick = { setShowDeleteDialog(false) }) { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_cancel)) }
                 }
             )
         }
 
-        if (showAvatarSelector) {
+        if (uiState.showAvatarSelector) {
             AvatarSelectionDialog(
-                onDismiss = { showAvatarSelector = false },
-                onAvatarSelected = { url -> profilePictureUrl = url }
+                onDismiss = { setShowAvatarSelector(false) },
+                onAvatarSelected = onAvatarSelected
             )
         }
     }

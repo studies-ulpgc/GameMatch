@@ -17,7 +17,7 @@ data class AppSettingsUiState(
 )
 
 class AppSettingsViewModel(
-    private val settingsRepository: SettingsRepository = SettingsRepository(),
+    private val settingsRepository: SettingsRepository,
     private val localeManager: LocaleManager = LocaleManagerImpl()
 ) : ViewModel() {
 

@@ -50,24 +50,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.pamn.gamematch.R
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.model.GameReview
+import com.pamn.gamematch.ui.theme.GameMatchTheme
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+import com.pamn.gamematch.ui.AppViewModelProvider
 
 @Composable
 fun GameDetailModal(
     game: Game,
     onDismiss: () -> Unit,
     onNavigateToFullDetails: (String) -> Unit = {},
-    viewModel: GameDetailViewModel = viewModel()
+    viewModel: GameDetailViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -75,6 +80,8 @@ fun GameDetailModal(
     var isEditingOwnReview by remember { mutableStateOf(false) }
     var userRatingInput by remember { mutableIntStateOf(5) }
     var userCommentInput by remember { mutableStateOf("") }
+
+    val steamOpenErrorMsg = stringResource(R.string.detail_steam_open_error)
 
     // Función auxiliar para abrir la tienda de Steam
     fun openSteamStore(steamAppId: Int) {
@@ -85,7 +92,7 @@ fun GameDetailModal(
             )
             context.startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(context, "No se pudo abrir la tienda de Steam", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, steamOpenErrorMsg, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -112,7 +119,7 @@ fun GameDetailModal(
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, error.asString(context), Toast.LENGTH_SHORT).show()
             viewModel.clearMessages()
         }
     }
@@ -120,7 +127,7 @@ fun GameDetailModal(
     // Al publicarse o actualizarse con éxito, limpiar formulario y cerrar modo edición
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let { success ->
-            Toast.makeText(context, success, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, success.asString(context), Toast.LENGTH_SHORT).show()
             viewModel.clearMessages()
             isEditingOwnReview = false
             if (uiState.userReview == null) {
@@ -235,14 +242,14 @@ fun GameDetailModal(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Star,
-                            contentDescription = "Puntuación",
-                            tint = Color(0xFFFFC107),
+                            contentDescription = stringResource(R.string.detail_rating_cd),
+                            tint = GameMatchTheme.semanticColors.starYellow,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = if (uiState.reviews.isNotEmpty())
-                                String.format(java.util.Locale.getDefault(), "%.1f / 5 (%d)", uiState.averageRating, uiState.reviews.size)
-                            else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.detail_no_reviews),
+                                "%.1f / 5 (%d)".format(uiState.averageRating, uiState.reviews.size)
+                            else stringResource(R.string.detail_no_reviews),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -278,7 +285,8 @@ fun GameDetailModal(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    if (uiState.userReview != null && !isEditingOwnReview) {
+                    val currentUserReview = uiState.userReview
+                    if (currentUserReview != null && !isEditingOwnReview) {
                         // Reseña Existente del Usuario
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -292,11 +300,11 @@ fun GameDetailModal(
                                 ) {
                                     Row {
                                         repeat(5) { index ->
-                                            val isFilled = index < uiState.userReview!!.rating
+                                            val isFilled = index < currentUserReview.rating
                                             Icon(
                                                 imageVector = if (isFilled) Icons.Default.Star else Icons.Outlined.Star,
                                                 contentDescription = null,
-                                                tint = if (isFilled) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                tint = if (isFilled) GameMatchTheme.semanticColors.starYellow else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -314,7 +322,7 @@ fun GameDetailModal(
                                             )
                                         }
                                         IconButton(
-                                            onClick = { viewModel.deleteReview(uiState.userReview!!.id) },
+                                            onClick = { viewModel.deleteReview(currentUserReview.id) },
                                             modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
@@ -328,7 +336,7 @@ fun GameDetailModal(
 
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = uiState.userReview!!.comment,
+                                    text = currentUserReview.comment,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -349,8 +357,8 @@ fun GameDetailModal(
                                     ) {
                                         Icon(
                                             imageVector = if (isFilled) Icons.Default.Star else Icons.Outlined.Star,
-                                            contentDescription = "Estrella $starIndex",
-                                            tint = if (isFilled) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            contentDescription = stringResource(R.string.detail_star_cd, starIndex),
+                                            tint = if (isFilled) GameMatchTheme.semanticColors.starYellow else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -382,12 +390,14 @@ fun GameDetailModal(
                                     Spacer(modifier = Modifier.width(6.dp))
                                 }
 
+                                val defaultUserName = stringResource(R.string.detail_default_username)
                                 Button(
                                     onClick = {
-                                        if (uiState.userReview != null) {
-                                            viewModel.updateReview(uiState.userReview!!.id, userRatingInput, userCommentInput)
+                                        val myReview = uiState.userReview
+                                        if (myReview != null) {
+                                            viewModel.updateReview(myReview.id, userRatingInput, userCommentInput)
                                         } else {
-                                            viewModel.submitReview(game.id, game.title, userRatingInput, userCommentInput)
+                                            viewModel.submitReview(game.id, game.title, userRatingInput, userCommentInput, defaultUserName)
                                         }
                                     },
                                     enabled = !uiState.isSaving && userCommentInput.isNotBlank()
@@ -494,7 +504,7 @@ private fun GameReviewItem(review: GameReview) {
                     Icon(
                         imageVector = if (isFilled) Icons.Default.Star else Icons.Outlined.Star,
                         contentDescription = null,
-                        tint = if (isFilled) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (isFilled) GameMatchTheme.semanticColors.starYellow else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
                 }
