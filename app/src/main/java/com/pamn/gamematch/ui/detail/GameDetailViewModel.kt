@@ -2,9 +2,11 @@ package com.pamn.gamematch.ui.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.pamn.gamematch.R
 import com.pamn.gamematch.data.model.GameReview
+import com.pamn.gamematch.data.repository.AuthRepository
 import com.pamn.gamematch.data.repository.GameRepository
+import com.pamn.gamematch.utils.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,17 +18,17 @@ data class GameDetailUiState(
     val reviews: List<GameReview> = emptyList(),
     val userReview: GameReview? = null,
     val averageRating: Double = 0.0,
-    val priceDisplay: String? = null,
+    val price: Double? = null,
     val isPriceLoading: Boolean = false,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
-    val errorMessage: String? = null,
-    val successMessage: String? = null
+    val errorMessage: UiText? = null,
+    val successMessage: UiText? = null
 )
 
 class GameDetailViewModel(
-    private val gameRepository: GameRepository = GameRepository(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val gameRepository: GameRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GameDetailUiState())
@@ -35,26 +37,19 @@ class GameDetailViewModel(
     /** Consulta asíncrona bajo demanda del precio en Steam. */
     fun loadSteamPrice(steamAppId: Int?, defaultPrice: Double?) {
         if (steamAppId != null) {
-            _uiState.update { it.copy(isPriceLoading = true, priceDisplay = null) }
+            _uiState.update { it.copy(isPriceLoading = true, price = null) }
             viewModelScope.launch {
                 val result = gameRepository.getSteamPrice(steamAppId)
                 result
                     .onSuccess { price ->
-                        val formatted = price ?: if (defaultPrice != null && defaultPrice > 0.0) "$defaultPrice €" else if (defaultPrice == 0.0) "Gratis" else "Consultar en tienda"
-                        _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
+                        _uiState.update { it.copy(price = price ?: defaultPrice, isPriceLoading = false) }
                     }
                     .onFailure {
-                        val fallback = if (defaultPrice != null && defaultPrice > 0.0) "$defaultPrice €" else if (defaultPrice == 0.0) "Gratis" else "Consultar en tienda"
-                        _uiState.update { it.copy(priceDisplay = fallback, isPriceLoading = false) }
+                        _uiState.update { it.copy(price = defaultPrice, isPriceLoading = false) }
                     }
             }
         } else {
-            val formatted = when {
-                defaultPrice != null && defaultPrice > 0.0 -> "$defaultPrice €"
-                defaultPrice == 0.0 -> "Gratis"
-                else -> "Precio no disponible"
-            }
-            _uiState.update { it.copy(priceDisplay = formatted, isPriceLoading = false) }
+            _uiState.update { it.copy(price = defaultPrice, isPriceLoading = false) }
         }
     }
 
@@ -74,7 +69,7 @@ class GameDetailViewModel(
         gameRepository.getReviewsForGame(gameId) { result ->
             result
                 .onSuccess { reviewsList ->
-                    val currentUid = auth.currentUser?.uid ?: ""
+                    val currentUid = authRepository.currentUserId ?: ""
                     val myReview = reviewsList.find { it.userId == currentUid }
                     val avg = if (reviewsList.isNotEmpty()) {
                         reviewsList.map { it.rating }.average()
@@ -93,22 +88,22 @@ class GameDetailViewModel(
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "Error al cargar las reseñas"
+                            errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) }
+                                ?: UiText.StringResource(R.string.detail_error_load_reviews)
                         )
                     }
                 }
         }
     }
 
-    fun submitReview(gameId: String, gameTitle: String, rating: Int, comment: String) {
+    fun submitReview(gameId: String, gameTitle: String, rating: Int, comment: String, defaultUserName: String) {
         if (comment.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Escribe un comentario antes de publicar") }
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.detail_error_comment_required)) }
             return
         }
 
-        val currentUid = auth.currentUser?.uid ?: ""
-        val username = auth.currentUser?.displayName?.ifBlank { "Jugador" }
-            ?: auth.currentUser?.email?.substringBefore("@") ?: "Jugador"
+        val currentUid = authRepository.currentUserId ?: ""
+        val username = authRepository.getCurrentUserName(defaultUserName)
 
         val review = GameReview(
             gameId = gameId,
@@ -125,17 +120,17 @@ class GameDetailViewModel(
         gameRepository.addReviewForGame(review) { success ->
             _uiState.update { it.copy(isSaving = false) }
             if (success) {
-                _uiState.update { it.copy(successMessage = "¡Reseña publicada con éxito!") }
+                _uiState.update { it.copy(successMessage = UiText.StringResource(R.string.detail_review_published_success)) }
                 loadReviewsForGame(gameId)
             } else {
-                _uiState.update { it.copy(errorMessage = "Error al publicar la reseña") }
+                _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.detail_review_publish_error)) }
             }
         }
     }
 
     fun updateReview(reviewId: String, rating: Int, comment: String) {
         if (comment.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Escribe un comentario") }
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.detail_error_comment_required)) }
             return
         }
 
@@ -144,10 +139,10 @@ class GameDetailViewModel(
         gameRepository.updateReview(reviewId, rating, comment.trim()) { success ->
             _uiState.update { it.copy(isSaving = false) }
             if (success) {
-                _uiState.update { it.copy(successMessage = "¡Reseña actualizada!") }
+                _uiState.update { it.copy(successMessage = UiText.StringResource(R.string.detail_review_updated_success)) }
                 loadReviewsForGame(_uiState.value.gameId)
             } else {
-                _uiState.update { it.copy(errorMessage = "Error al actualizar la reseña") }
+                _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.detail_review_update_error)) }
             }
         }
     }
@@ -158,10 +153,10 @@ class GameDetailViewModel(
         gameRepository.deleteReview(reviewId) { success ->
             _uiState.update { it.copy(isSaving = false) }
             if (success) {
-                _uiState.update { it.copy(successMessage = "Reseña eliminada") }
+                _uiState.update { it.copy(successMessage = UiText.StringResource(R.string.detail_review_deleted_success)) }
                 loadReviewsForGame(_uiState.value.gameId)
             } else {
-                _uiState.update { it.copy(errorMessage = "Error al eliminar la reseña") }
+                _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.detail_review_delete_error)) }
             }
         }
     }

@@ -2,8 +2,10 @@ package com.pamn.gamematch.ui.favorites
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pamn.gamematch.R
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.repository.GameRepository
+import com.pamn.gamematch.utils.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,19 +16,15 @@ sealed interface FavoritesUiState {
     data object Loading : FavoritesUiState
     data object Empty : FavoritesUiState
     data class Success(val games: List<Game>) : FavoritesUiState
-    data class Error(val message: String) : FavoritesUiState
+    data class Error(val message: UiText) : FavoritesUiState
 }
 
 class FavoritesViewModel(
-    private val repository: GameRepository = GameRepository()
+    private val repository: GameRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<FavoritesUiState>(FavoritesUiState.Loading)
     val uiState: StateFlow<FavoritesUiState> = _uiState.asStateFlow()
-
-    init {
-        loadLikedGames()
-    }
 
     /** Carga los juegos favoritos cruzando los IDs de Firestore con el catálogo general de Firestore. */
     fun loadLikedGames() {
@@ -45,9 +43,12 @@ class FavoritesViewModel(
                             if (likedGames.isEmpty()) FavoritesUiState.Empty
                             else FavoritesUiState.Success(likedGames)
                     }
-                    .onFailure {
+                    .onFailure { error ->
                         _uiState.value =
-                            FavoritesUiState.Error(it.message ?: "No se pudieron cargar tus matches")
+                            FavoritesUiState.Error(
+                                error.localizedMessage?.let { UiText.DynamicString(it) }
+                                    ?: UiText.StringResource(R.string.favorites_error_load)
+                            )
                     }
             }
         }

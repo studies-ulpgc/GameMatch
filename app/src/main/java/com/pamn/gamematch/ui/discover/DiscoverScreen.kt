@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -50,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.pamn.gamematch.R
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,6 +64,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.ui.detail.GameDetailModal
+import com.pamn.gamematch.ui.AppViewModelProvider
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import com.pamn.gamematch.ui.theme.UnreleasedBadgeColor
 
@@ -68,7 +74,7 @@ val PLATFORM_OPTIONS = listOf("Todas", "Nintendo", "PlayStation", "Xbox", "PC")
 fun DiscoverScreen(
     modifier: Modifier = Modifier,
     onNavigateToFullDetails: (String) -> Unit = {},
-    viewModel: DiscoverViewModel = viewModel()
+    viewModel: DiscoverViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedGameForModal by remember { mutableStateOf<Game?>(null) }
@@ -100,11 +106,11 @@ fun DiscoverScreen(
                 value = uiState.searchQuery,
                 onValueChange = viewModel::onSearchQueryChanged,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_search_hint)) },
+                placeholder = { Text(stringResource(R.string.discover_search_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar"
+                        contentDescription = stringResource(R.string.discover_search_cd)
                     )
                 },
                 trailingIcon = {
@@ -112,7 +118,7 @@ fun DiscoverScreen(
                         IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_search_clear)
+                                contentDescription = stringResource(R.string.discover_search_clear)
                             )
                         }
                     }
@@ -126,18 +132,24 @@ fun DiscoverScreen(
             )
         }
 
-        // 2. Filtros de Plataformas (Chips) con selección múltiple
+        // 2. Filtros de Géneros (Chips) con selección múltiple
         item {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(PLATFORM_OPTIONS) { platform ->
-                    val isSelected = uiState.selectedPlatforms.contains(platform)
+                items(uiState.availableGenres) { genre ->
+                    val isSelected = uiState.selectedGenres.contains(genre)
+                    val labelText = if (genre == "Todas") {
+                        androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_platform_all)
+                    } else {
+                        com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(genre)
+                    }
+
                     FilterChip(
                         selected = isSelected,
-                        onClick = { viewModel.onPlatformSelected(platform) },
-                        label = { Text(if (platform == "Todas") androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_platform_all) else platform) },
+                        onClick = { viewModel.onGenreSelected(genre) },
+                        label = { Text(labelText) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -174,6 +186,75 @@ fun DiscoverScreen(
                     steps = 19,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
+
+        // 4. Selector de Ordenamiento
+        item {
+            var expanded by remember { mutableStateOf(false) }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_sort_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Box {
+                    val sortLabelRes = when (uiState.sortOption) {
+                        com.pamn.gamematch.utils.SortOption.RELEVANCE -> com.pamn.gamematch.R.string.discover_sort_relevance
+                        com.pamn.gamematch.utils.SortOption.PRICE_ASC -> com.pamn.gamematch.R.string.discover_sort_price_asc
+                        com.pamn.gamematch.utils.SortOption.PRICE_DESC -> com.pamn.gamematch.R.string.discover_sort_price_desc
+                        com.pamn.gamematch.utils.SortOption.RATING -> com.pamn.gamematch.R.string.discover_sort_rating
+                        com.pamn.gamematch.utils.SortOption.VOTES -> com.pamn.gamematch.R.string.discover_sort_votes
+                        com.pamn.gamematch.utils.SortOption.NEWEST -> com.pamn.gamematch.R.string.discover_sort_newest
+                    }
+
+                    FilterChip(
+                        selected = uiState.sortOption != com.pamn.gamematch.utils.SortOption.RELEVANCE,
+                        onClick = { expanded = true },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(androidx.compose.ui.res.stringResource(sortLabelRes))
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowDropDown,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        com.pamn.gamematch.utils.SortOption.entries.forEach { option ->
+                            val labelRes = when (option) {
+                                com.pamn.gamematch.utils.SortOption.RELEVANCE -> com.pamn.gamematch.R.string.discover_sort_relevance
+                                com.pamn.gamematch.utils.SortOption.PRICE_ASC -> com.pamn.gamematch.R.string.discover_sort_price_asc
+                                com.pamn.gamematch.utils.SortOption.PRICE_DESC -> com.pamn.gamematch.R.string.discover_sort_price_desc
+                                com.pamn.gamematch.utils.SortOption.RATING -> com.pamn.gamematch.R.string.discover_sort_rating
+                                com.pamn.gamematch.utils.SortOption.VOTES -> com.pamn.gamematch.R.string.discover_sort_votes
+                                com.pamn.gamematch.utils.SortOption.NEWEST -> com.pamn.gamematch.R.string.discover_sort_newest
+                            }
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(labelRes)) },
+                                onClick = {
+                                    viewModel.onSortSelected(option)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -239,52 +320,56 @@ fun DiscoverScreen(
             }
         } else {
             // Carruseles horizontales (+ Destacado y + Trending)
-            item {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_featured),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(uiState.featuredGames, key = { it.id }) { game ->
-                        DiscoverGameCard(
-                            game = game,
-                            isLiked = uiState.likedGameIds.contains(game.id),
-                            onToggleFavorite = { viewModel.toggleFavorite(game.id) },
-                            onShowInfo = { selectedGameForModal = game },
-                            modifier = Modifier
-                                .width(200.dp)
-                                .height(270.dp)
-                        )
+            if (uiState.featuredGames.isNotEmpty()) {
+                item {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_featured),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(uiState.featuredGames, key = { it.id }) { game ->
+                            DiscoverGameCard(
+                                game = game,
+                                isLiked = uiState.likedGameIds.contains(game.id),
+                                onToggleFavorite = { viewModel.toggleFavorite(game.id) },
+                                onShowInfo = { selectedGameForModal = game },
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(270.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            item {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_trending),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(uiState.trendingGames, key = { it.id }) { game ->
-                        DiscoverGameCard(
-                            game = game,
-                            isLiked = uiState.likedGameIds.contains(game.id),
-                            onToggleFavorite = { viewModel.toggleFavorite(game.id) },
-                            onShowInfo = { selectedGameForModal = game },
-                            modifier = Modifier
-                                .width(200.dp)
-                                .height(270.dp)
-                        )
+            if (uiState.trendingGames.isNotEmpty()) {
+                item {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.discover_section_trending),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(uiState.trendingGames, key = { it.id }) { game ->
+                            DiscoverGameCard(
+                                game = game,
+                                isLiked = uiState.likedGameIds.contains(game.id),
+                                onToggleFavorite = { viewModel.toggleFavorite(game.id) },
+                                onShowInfo = { selectedGameForModal = game },
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(270.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -355,12 +440,13 @@ fun DiscoverGameCard(
                 Text(
                     text = game.title,
                     style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = textColor
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = game.genre,
+                    text = com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(game.genre),
                     style = MaterialTheme.typography.bodySmall,
                     color = textColor.copy(alpha = 0.8f)
                 )
@@ -369,15 +455,17 @@ fun DiscoverGameCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val priceBadgeText = com.pamn.gamematch.ui.components.priceLabel(game.price)
+
                     Surface(
                         color = SteamAccentBlue,
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = if (game.price == null || game.price == 0.0) "Gratis" else "${game.price} €",
+                            text = priceBadgeText,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Black
@@ -385,12 +473,13 @@ fun DiscoverGameCard(
                     }
 
                     if (!game.isReleased) {
+                        Spacer(modifier = Modifier.width(4.dp))
                         Surface(
                             color = UnreleasedBadgeColor,
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "Próximamente",
+                                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_status_upcoming),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White
@@ -437,7 +526,7 @@ fun DiscoverGameCard(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Favorite,
-                        contentDescription = if (isLiked) "Quitar de favoritos" else "Añadir a favoritos",
+                        contentDescription = if (isLiked) stringResource(R.string.cd_remove_favorite) else stringResource(R.string.cd_add_favorite),
                         tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier.size(20.dp)
                     )

@@ -69,9 +69,9 @@
     <string name="profile_delete_account">Eliminar Cuenta</string>
     <string name="profile_logout">Cerrar Sesión</string>
     <string name="profile_dev_tools">Herramientas de Desarrollador</string>
-    <string name="profile_dev_sync_desc">Sincroniza el catálogo de RAWG API hacia Cloud Firestore.</string>
+    <string name="profile_dev_sync_desc">Sincroniza el catálogo de IGDB API hacia Cloud Firestore.</string>
     <string name="profile_dev_syncing">Sincronizando...</string>
-    <string name="profile_dev_sync_btn">Sincronizar catálogo con RAWG (Admin)</string>
+    <string name="profile_dev_sync_btn">Sincronizar catálogo con IGDB (Admin)</string>
 
     <!-- Discover -->
     <string name="discover_title">Descubrir</string>
@@ -86,6 +86,13 @@
     <string name="discover_section_trending">+ Trending</string>
     <string name="discover_section_all">Todos los Juegos</string>
     <string name="discover_empty">No se encontraron juegos con estos filtros.</string>
+    <string name="discover_sort_title">Orden:</string>
+    <string name="discover_sort_relevance">Relevancia</string>
+    <string name="discover_sort_price_asc">Precio: de menor a mayor</string>
+    <string name="discover_sort_price_desc">Precio: de mayor a menor</string>
+    <string name="discover_sort_rating">Mejor valorados</string>
+    <string name="discover_sort_votes">Más populares</string>
+    <string name="discover_sort_newest">Más recientes</string>
     <!-- Favorites -->
     <string name="favorites_title">Mis Favoritos</string>
     <string name="favorites_empty">Aún no tienes matches</string>
@@ -97,11 +104,12 @@
 
     <!-- Game Card & Detail -->
     <string name="game_status_upcoming">Próximamente</string>
-    <string name="game_price_check">Consultar</string>
     <string name="game_price_free">Gratis</string>
-    <string name="game_price_format">%1$s €</string>
+    <string name="game_price_not_available">Precio no disponible</string>
 
     <!-- Game Detail Modal -->
+    <string name="detail_default_username">Jugador</string>
+    <string name="detail_rating_cd">Puntuación</string>
     <string name="detail_genre">Género: %1$s</string>
     <string name="detail_steam_badge">Steam 🛒</string>
     <string name="detail_steam_button">Ver ficha oficial en Steam 🛒</string>
@@ -113,6 +121,10 @@
     <string name="detail_cancel">Cancelar</string>
     <string name="detail_save_changes">Guardar Cambios</string>
     <string name="detail_publish_review">Publicar Reseña</string>
+    <string name="detail_more_info">Más Información ➔</string>
+    <string name="detail_close">Cerrar</string>
+    <string name="detail_community_reviews">Todas las Reseñas Comunitarias 💬</string>
+    <string name="detail_no_other_reviews">Aún no hay reseñas de otros jugadores.</string>
 
     <!-- Community -->
     <string name="community_title">Comunidad</string>
@@ -147,9 +159,16 @@
     <string name="community_room_join">Unirse a la sala</string>
     <string name="community_room_leave">Salir de la sala</string>
     <string name="community_empty_users">No se encontraron otros jugadores todavía.</string>
+    <string name="community_empty_users_search">No se encontraron jugadores que coincidan con \'%1$s\'.</string>
+    <string name="community_empty_users_following">Aún no sigues a ningún jugador.</string>
+    <string name="community_search_users_placeholder">Buscar jugador por nombre...</string>
+    <string name="community_search_users_cd">Buscar jugador</string>
+    <string name="community_user_filter_all">Todos</string>
+    <string name="community_user_filter_following">Siguiendo</string>
     <string name="community_user_language">Idioma: %1$s</string>
     <string name="community_user_following">Siguiendo</string>
     <string name="community_user_affinity">%1$d%% de afinidad contigo</string>
+    <string name="community_user_match_percentage">%1$d%% de coincidencia</string>
     <string name="community_user_birthyear">Año de nacimiento: %1$s</string>
     <string name="community_user_preferred_genres">Géneros favoritos:</string>
     <string name="community_user_default_name">Perfil de Jugador</string>
@@ -217,6 +236,10 @@
     <string name="profile_delete_account_dialog_desc">Esta acción es permanente y eliminará todos tus favoritos y preferencias de Firebase.</string>
     <string name="profile_confirm_delete">Confirmar Borrado</string>
     <string name="profile_account_deleted">Cuenta eliminada</string>
+    <string name="profile_sync_success">¡Éxito! Sincronizados %1$d juegos con IGDB.</string>
+    <string name="profile_sync_error">Error al sincronizar con IGDB</string>
+    <string name="profile_save_error">Error al guardar el perfil</string>
+    <string name="profile_delete_error">Error al eliminar la cuenta</string>
 
     <!-- Community Messages & Modals -->
     <string name="community_expand_games_cd">Desplegar juegos</string>
@@ -237,10 +260,34 @@
     <string name="community_create_room_error">Error al crear la sala</string>
     <string name="community_update_room_error">Error al actualizar la sala</string>
     <string name="community_delete_room_error">Error al eliminar la sala</string>
+    <string name="community_default_host_name">Anfitrión</string>
+
+    <string name="detail_error_comment_required">Escribe un comentario antes de publicar</string>
+    <string name="detail_review_published_success">¡Reseña publicada con éxito!</string>
+    <string name="detail_review_publish_error">Error al publicar la reseña</string>
+    <string name="detail_review_updated_success">¡Reseña actualizada!</string>
+    <string name="detail_review_update_error">Error al actualizar la reseña</string>
+    <string name="detail_review_deleted_success">Reseña eliminada</string>
+    <string name="detail_review_delete_error">Error al eliminar la reseña</string>
+    <string name="detail_error_load_reviews">Error al cargar las reseñas</string>
+
+    <string name="favorites_error_load">No se pudieron cargar tus matches</string>
+
+    <string name="discover_error_load_favorites">Error al cargar favoritos</string>
+
+    <string name="login_subtitle">Encuentra tu próximo juego favorito</string>
+    <string name="auth_cd_toggle_password">Mostrar u ocultar contraseña</string>
+    <string name="detail_steam_open_error">No se pudo abrir la tienda de Steam</string>
+    <string name="detail_star_cd">Estrella %1$d</string>
+    <string name="discover_search_cd">Buscar</string>
+    <string name="cd_remove_favorite">Quitar de favoritos</string>
+    <string name="cd_add_favorite">Añadir a favoritos</string>
+    <string name="profile_edit_cd">Editar Perfil</string>
 
     <!-- Swipe -->
     <string name="swipe_empty_title">No hay juegos disponibles en el catálogo.</string>
-    <string name="swipe_empty_subtitle">Sincroniza el catálogo desde tu perfil (Admin).</string>
+    <string name="swipe_empty_subtitle">Sincroniza el catálogo desde tu perfil (Admin) o pulsa Cargar juegos.</string>
+    <string name="swipe_reload_button">Cargar juegos</string>
     <string name="swipe_saved_favorites">¡Guardado en favoritos!</string>
     <string name="swipe_undo_success">Deshecho y eliminado de favoritos</string>
     <string name="swipe_undo_empty">No hay historial para deshacer</string>

@@ -8,7 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.firebase.auth.FirebaseAuth
+import com.pamn.gamematch.ui.AppViewModelProvider
 import com.pamn.gamematch.ui.MainContainerScreen
 import com.pamn.gamematch.ui.auth.LoginScreen
 import com.pamn.gamematch.ui.auth.OnboardingScreen
@@ -21,11 +21,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val settingsViewModel: AppSettingsViewModel = viewModel()
+            val settingsViewModel: AppSettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
             val settingsState by settingsViewModel.uiState.collectAsState()
 
-            val auth = FirebaseAuth.getInstance()
-            val startScreen = if (auth.currentUser != null) "main" else "login"
+            val app = application as GameMatchApp
+            val authRepository = app.container.authRepository
+            val startScreen = if (authRepository.currentUser != null) "main" else "login"
             var currentScreen by rememberSaveable { mutableStateOf(startScreen) }
 
             // Cambia el color de los iconos de la barra de estado (hora/batería)
@@ -45,7 +46,7 @@ class MainActivity : AppCompatActivity() {
 
             // Carga ajustes cuando la pantalla principal es activa
             LaunchedEffect(currentScreen) {
-                if (auth.currentUser != null) {
+                if (authRepository.currentUser != null) {
                     settingsViewModel.loadSettings()
                 }
             }

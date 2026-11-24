@@ -13,15 +13,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.pamn.gamematch.data.repository.GameRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pamn.gamematch.ui.AppViewModelProvider
 import com.pamn.gamematch.ui.components.AvatarSelectionDialog
 import com.pamn.gamematch.ui.components.ProfileAvatar
 import com.pamn.gamematch.ui.theme.GameMatchTheme
+import com.pamn.gamematch.utils.GenreUtils
+import com.pamn.gamematch.utils.ValidationUtils
 import java.util.Calendar
-import com.pamn.gamematch.data.model.User
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -30,49 +31,77 @@ fun OnboardingScreen(
     isDarkMode: Boolean = true,
     onToggleDarkMode: (Boolean) -> Unit = {},
     currentLanguage: String = "es",
-    onChangeLanguage: (String) -> Unit = {}
+    onChangeLanguage: (String) -> Unit = {},
+    viewModel: OnboardingViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.userMessage) {
+        uiState.userMessage?.let { msg ->
+            Toast.makeText(context, msg.asString(context), Toast.LENGTH_SHORT).show()
+            viewModel.clearUserMessage()
+        }
+    }
+
+    OnboardingScreenContent(
+        uiState = uiState,
+        isDarkMode = isDarkMode,
+        onToggleDarkMode = onToggleDarkMode,
+        currentLanguage = currentLanguage,
+        onChangeLanguage = onChangeLanguage,
+        onUsernameChanged = viewModel::onUsernameChanged,
+        onBirthYearChanged = viewModel::onBirthYearChanged,
+        onGenreToggled = viewModel::toggleGenre,
+        onPriceRangeChanged = viewModel::onPriceRangeChanged,
+        onOnlyReleasedChanged = viewModel::onOnlyReleasedChanged,
+        onAvatarSelected = viewModel::onAvatarSelected,
+        setShowAvatarSelector = viewModel::setShowAvatarSelector,
+        onComplete = { minYear, maxYear ->
+            viewModel.completeOnboarding(
+                minValidYear = minYear,
+                maxValidYear = maxYear,
+                isDarkMode = isDarkMode,
+                currentLanguage = currentLanguage,
+                onComplete = onOnboardingComplete
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun OnboardingScreenContent(
+    uiState: OnboardingUiState,
+    isDarkMode: Boolean = true,
+    onToggleDarkMode: (Boolean) -> Unit = {},
+    currentLanguage: String = "es",
+    onChangeLanguage: (String) -> Unit = {},
+    onUsernameChanged: (String) -> Unit = {},
+    onBirthYearChanged: (String) -> Unit = {},
+    onGenreToggled: (String) -> Unit = {},
+    onPriceRangeChanged: (ClosedFloatingPointRange<Float>) -> Unit = {},
+    onOnlyReleasedChanged: (Boolean) -> Unit = {},
+    onAvatarSelected: (String) -> Unit = {},
+    setShowAvatarSelector: (Boolean) -> Unit = {},
+    onComplete: (Int, Int) -> Unit = { _, _ -> }
 ) {
     GameMatchTheme(darkTheme = isDarkMode) {
-        val context = LocalContext.current
-        val gameRepository = remember { GameRepository() }
-
         val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
         val minValidYear = currentYear - 120
         val maxValidYear = currentYear - 8
 
-        var username by remember { mutableStateOf("") }
-        var birthYear by remember { mutableStateOf("") }
-        var selectedGenres by remember { mutableStateOf(setOf<String>()) }
         var isUsernameFocused by remember { mutableStateOf(false) }
-
-        var priceRange by remember { mutableStateOf(0f..70f) }
-
         var usernameTouched by remember { mutableStateOf(false) }
         var usernameHasFocused by remember { mutableStateOf(false) }
 
         var yearTouched by remember { mutableStateOf(false) }
         var yearHasFocused by remember { mutableStateOf(false) }
-        var isLoading by remember { mutableStateOf(false) }
 
-        var profilePictureUrl by remember { mutableStateOf("https://api.dicebear.com/7.x/bottts/png?seed=default") }
-        var showAvatarSelector by remember { mutableStateOf(false) }
-        var onlyReleased by remember { mutableStateOf(true) }
-
-        val isYearValid = remember(birthYear) {
-            if (birthYear.isEmpty()) true
-            else {
-                val yearNum = birthYear.toIntOrNull()
-                if (yearNum == null) false
-                else if (birthYear.length < 4) {
-                    val minPrefix = minValidYear.toString().take(birthYear.length).toInt()
-                    val maxPrefix = maxValidYear.toString().take(birthYear.length).toInt()
-                    yearNum in minPrefix..maxPrefix
-                } else {
-                    yearNum in minValidYear..maxValidYear
-                }
-            }
+        val isYearValid = remember(uiState.birthYear) {
+            ValidationUtils.isBirthYearPrefixValid(uiState.birthYear, minValidYear, maxValidYear)
         }
-        val availableGenres = com.pamn.gamematch.utils.GenreUtils.ALL_GENRES
+        val availableGenres = GenreUtils.ALL_GENRES
 
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -88,7 +117,6 @@ fun OnboardingScreen(
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Encabezado
                 Text(
                     text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_title),
                     style = MaterialTheme.typography.headlineMedium,
@@ -104,14 +132,13 @@ fun OnboardingScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 ProfileAvatar(
-                    imageUrl = profilePictureUrl,
+                    imageUrl = uiState.profilePictureUrl,
                     isEditing = true,
-                    onClick = { showAvatarSelector = true }
+                    onClick = { setShowAvatarSelector(true) }
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Configuración de Apariencia (Tarjeta limpia sin contorno)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -164,12 +191,12 @@ fun OnboardingScreen(
                             }
                             FilterChip(
                                 selected = true,
-                                onClick = { 
+                                onClick = {
                                     val newLangCode = if (currentLanguage == "es") "en" else "es"
                                     onChangeLanguage(newLangCode)
                                 },
                                 label = { Text(if (currentLanguage == "es") "Español" else "English") },
-                                border = null // Eliminamos borde
+                                border = null
                             )
                         }
                     }
@@ -177,10 +204,9 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Datos de Usuario
                 OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
+                    value = uiState.username,
+                    onValueChange = onUsernameChanged,
                     label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_username_label)) },
                     leadingIcon = {
                         Icon(
@@ -190,16 +216,16 @@ fun OnboardingScreen(
                         )
                     },
                     singleLine = true,
-                    isError = usernameTouched && username.isBlank(),
+                    isError = usernameTouched && uiState.username.isBlank(),
                     supportingText = {
-                        if (usernameTouched && username.isBlank()) {
+                        if (usernameTouched && uiState.username.isBlank()) {
                             Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_username_error))
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { focusState ->
-                            isUsernameFocused = focusState.isFocused // Captura el foco
+                            isUsernameFocused = focusState.isFocused
                             if (focusState.isFocused) {
                                 usernameHasFocused = true
                             } else if (usernameHasFocused) {
@@ -211,20 +237,15 @@ fun OnboardingScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
-                    value = birthYear,
-                    onValueChange = { input ->
-                        if (input.all { it.isDigit() } && input.length <= 4) {
-                            birthYear = input
-                            yearTouched = true
-                        }
-                    },
+                    value = uiState.birthYear,
+                    onValueChange = onBirthYearChanged,
                     label = { Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_birthyear_label)) },
                     singleLine = true,
-                    isError = !isYearValid || (yearTouched && birthYear.isBlank()),
+                    isError = !isYearValid || (yearTouched && uiState.birthYear.isBlank()),
                     supportingText = {
-                        if ((yearTouched || birthYear.isNotEmpty()) && !isYearValid) {
+                        if ((yearTouched || uiState.birthYear.isNotEmpty()) && !isYearValid) {
                             Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_birthyear_error_out_of_range) + " ($minValidYear - $maxValidYear)")
-                        } else if (yearTouched && birthYear.isBlank()) {
+                        } else if (yearTouched && uiState.birthYear.isBlank()) {
                             Text(androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_birthyear_error_required))
                         }
                     },
@@ -241,7 +262,6 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Rango de Precio (Tarjeta limpia sin contorno)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -250,14 +270,14 @@ fun OnboardingScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_price_range) + " ${priceRange.start.toInt()} € - ${priceRange.endInclusive.toInt()} €",
+                            text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_price_range) + " ${uiState.priceRange.start.toInt()} € - ${uiState.priceRange.endInclusive.toInt()} €",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         RangeSlider(
-                            value = priceRange,
-                            onValueChange = { priceRange = it },
+                            value = uiState.priceRange,
+                            onValueChange = onPriceRangeChanged,
                             valueRange = 0f..100f,
                             steps = 19
                         )
@@ -266,7 +286,6 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Ajuste de Juegos No Estrenados
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -285,21 +304,20 @@ fun OnboardingScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (onlyReleased) androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_released_only_desc_on) else androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_released_only_desc_off),
+                                text = if (uiState.onlyReleased) androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_released_only_desc_on) else androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_released_only_desc_off),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
-                            checked = onlyReleased,
-                            onCheckedChange = { onToggleDarkMode(it) }
+                            checked = uiState.onlyReleased,
+                            onCheckedChange = onOnlyReleasedChanged
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Géneros Preferidos
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = androidx.compose.ui.res.stringResource(id = com.pamn.gamematch.R.string.onboarding_genres_title),
@@ -313,12 +331,10 @@ fun OnboardingScreen(
                     ) {
                         availableGenres.forEach { genre ->
                             FilterChip(
-                                selected = selectedGenres.contains(genre),
-                                onClick = {
-                                    selectedGenres = if (selectedGenres.contains(genre)) selectedGenres - genre else selectedGenres + genre
-                                },
-                                label = { Text(com.pamn.gamematch.utils.GenreUtils.getLocalizedGenre(genre)) },
-                                border = null // Eliminamos borde alrededor de los chips de selección
+                                selected = uiState.selectedGenres.contains(genre),
+                                onClick = { onGenreToggled(genre) },
+                                label = { Text(GenreUtils.getLocalizedGenre(genre)) },
+                                border = null
                             )
                         }
                     }
@@ -326,53 +342,18 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Botón Final
                 Button(
                     onClick = {
                         usernameTouched = true
                         yearTouched = true
-
-                        val yNum = birthYear.toIntOrNull()
-                        val validYear = yNum != null && yNum in minValidYear..maxValidYear
-
-                        if (username.isBlank() || birthYear.isBlank()) {
-                            Toast.makeText(context, context.getString(com.pamn.gamematch.R.string.onboarding_error_incomplete), Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-
-                        if (!validYear) {
-                            Toast.makeText(context, context.getString(com.pamn.gamematch.R.string.onboarding_birthyear_error_out_of_range) + " ($minValidYear - $maxValidYear)", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-
-                        // LLAMADA NUEVA REFACTORIZADA
-                        val updatedUser = User(
-                            username = username.trim(),
-                            preferredGenres = selectedGenres.toList(),
-                            minPrice = priceRange.start,
-                            maxPrice = priceRange.endInclusive,
-                            onlyReleased = onlyReleased,
-                            birthYear = birthYear,
-                            isDarkMode = isDarkMode,
-                            language = currentLanguage,
-                            profilePictureUrl = profilePictureUrl
-                        )
-
-                        gameRepository.saveUserPreferences(userModel = updatedUser) { success ->
-                            isLoading = false
-                            if (success) {
-                                onOnboardingComplete()
-                            } else {
-                                Toast.makeText(context, context.getString(com.pamn.gamematch.R.string.onboarding_error_save), Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                        onComplete(minValidYear, maxValidYear)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
-                    enabled = !isLoading
+                    enabled = !uiState.isLoading
                 ) {
-                    if (isLoading) {
+                    if (uiState.isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             color = MaterialTheme.colorScheme.onPrimary
@@ -385,10 +366,10 @@ fun OnboardingScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
-        if (showAvatarSelector) {
+        if (uiState.showAvatarSelector) {
             AvatarSelectionDialog(
-                onDismiss = { showAvatarSelector = false },
-                onAvatarSelected = { url -> profilePictureUrl = url }
+                onDismiss = { setShowAvatarSelector(false) },
+                onAvatarSelected = onAvatarSelected
             )
         }
     }

@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -20,12 +21,14 @@ import coil.compose.AsyncImage
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
 import com.pamn.gamematch.ui.theme.UnreleasedBadgeColor
+import com.pamn.gamematch.utils.GenreUtils
 import kotlin.math.roundToInt
 
 @Composable
 fun GameCard(
     game: Game,
     overlayAlpha: Float = 0f,
+    compact: Boolean = false,
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
     onDragProgress: (Float) -> Unit = {},
@@ -38,6 +41,8 @@ fun GameCard(
 
     // Ángulo de inclinación suave según el arrastre
     val rotation = (offsetX / 600f) * 15f
+
+    val priceBadgeText = com.pamn.gamematch.ui.components.priceLabel(game.price)
 
     Box(
         modifier = modifier
@@ -86,7 +91,7 @@ fun GameCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.55f)
+                .fillMaxHeight(if (compact) 0.7f else 0.55f)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
@@ -105,53 +110,60 @@ fun GameCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomStart)
-                .padding(horizontal = 20.dp, vertical = 85.dp)
+                .padding(
+                    horizontal = if (compact) 12.dp else 20.dp,
+                    vertical = if (compact) 12.dp else 85.dp
+                )
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = game.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = textColor
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = game.genre,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = textColor.copy(alpha = 0.8f)
-                    )
-                }
+            Text(
+                text = game.title,
+                style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
+                color = textColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = GenreUtils.getLocalizedGenre(game.genre),
+                style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                color = textColor.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (!game.isReleased) {
-                        Surface(
-                            color = UnreleasedBadgeColor,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_status_upcoming),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White
-                            )
-                        }
-                    }
+            Spacer(modifier = Modifier.height(if (compact) 4.dp else 6.dp))
 
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (!game.isReleased) {
                     Surface(
-                        color = SteamAccentBlue,
-                        shape = RoundedCornerShape(8.dp)
+                        color = UnreleasedBadgeColor,
+                        shape = RoundedCornerShape(if (compact) 6.dp else 8.dp)
                     ) {
                         Text(
-                            text = if (game.price == null) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_check) else if (game.price == 0.0) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_free) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_price_format, game.price.toString()),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.game_status_upcoming),
+                            modifier = Modifier.padding(
+                                horizontal = if (compact) 6.dp else 8.dp,
+                                vertical = if (compact) 2.dp else 4.dp
+                            ),
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Black
+                            color = Color.White
                         )
                     }
+                }
+
+                Surface(
+                    color = SteamAccentBlue,
+                    shape = RoundedCornerShape(if (compact) 6.dp else 8.dp)
+                ) {
+                    Text(
+                        text = priceBadgeText,
+                        modifier = Modifier.padding(
+                            horizontal = if (compact) 6.dp else 8.dp,
+                            vertical = if (compact) 2.dp else 4.dp
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Black
+                    )
                 }
             }
         }

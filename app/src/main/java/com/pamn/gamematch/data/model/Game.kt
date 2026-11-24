@@ -12,6 +12,7 @@ data class Game(
     val platforms: List<String> = listOf("PC", "PlayStation", "Xbox", "Nintendo"),
     val steamAppId: Int? = null,
     val rating: Double = 0.0,
+    val ratingCount: Int? = null,
     val isFeatured: Boolean = false,
     val isTrending: Boolean = false
 )

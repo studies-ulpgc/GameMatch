@@ -69,9 +69,9 @@
     <string name="profile_delete_account">Delete Account</string>
     <string name="profile_logout">Log Out</string>
     <string name="profile_dev_tools">Developer Tools</string>
-    <string name="profile_dev_sync_desc">Sync RAWG API catalog to Cloud Firestore.</string>
+    <string name="profile_dev_sync_desc">Sync IGDB API catalog to Cloud Firestore.</string>
     <string name="profile_dev_syncing">Syncing...</string>
-    <string name="profile_dev_sync_btn">Sync catalog with RAWG (Admin)</string>
+    <string name="profile_dev_sync_btn">Sync catalog with IGDB (Admin)</string>
 
     <!-- Discover -->
     <string name="discover_title">Discover</string>
@@ -86,6 +86,13 @@
     <string name="discover_section_trending">+ Trending</string>
     <string name="discover_section_all">All Games</string>
     <string name="discover_empty">No games match your search.</string>
+    <string name="discover_sort_title">Sort by:</string>
+    <string name="discover_sort_relevance">Relevance</string>
+    <string name="discover_sort_price_asc">Price: Low to High</string>
+    <string name="discover_sort_price_desc">Price: High to Low</string>
+    <string name="discover_sort_rating">Top Rated</string>
+    <string name="discover_sort_votes">Most Popular</string>
+    <string name="discover_sort_newest">Newest</string>
     <!-- Favorites -->
     <string name="favorites_title">My Favorites</string>
     <string name="favorites_empty">You don\'t have any matches yet</string>
@@ -97,11 +104,12 @@
 
     <!-- Game Card & Detail -->
     <string name="game_status_upcoming">Upcoming</string>
-    <string name="game_price_check">Check</string>
     <string name="game_price_free">Free</string>
-    <string name="game_price_format">%1$s €</string>
+    <string name="game_price_not_available">Price not available</string>
 
     <!-- Game Detail Modal -->
+    <string name="detail_default_username">Player</string>
+    <string name="detail_rating_cd">Rating</string>
     <string name="detail_genre">Genre: %1$s</string>
     <string name="detail_steam_badge">Steam 🛒</string>
     <string name="detail_steam_button">View on Steam 🛒</string>
@@ -113,6 +121,10 @@
     <string name="detail_cancel">Cancel</string>
     <string name="detail_save_changes">Save Changes</string>
     <string name="detail_publish_review">Publish Review</string>
+    <string name="detail_more_info">More Info ➔</string>
+    <string name="detail_close">Close</string>
+    <string name="detail_community_reviews">All Community Reviews 💬</string>
+    <string name="detail_no_other_reviews">No reviews from other players yet.</string>
 
     <!-- Community -->
     <string name="community_title">Community</string>
@@ -147,9 +159,16 @@
     <string name="community_room_join">Join room</string>
     <string name="community_room_leave">Leave room</string>
     <string name="community_empty_users">No other players found yet.</string>
+    <string name="community_empty_users_search">No players found matching \'%1$s\'.</string>
+    <string name="community_empty_users_following">You are not following any players yet.</string>
+    <string name="community_search_users_placeholder">Search player by name...</string>
+    <string name="community_search_users_cd">Search player</string>
+    <string name="community_user_filter_all">All</string>
+    <string name="community_user_filter_following">Following</string>
     <string name="community_user_language">Language: %1$s</string>
     <string name="community_user_following">Following</string>
     <string name="community_user_affinity">%1$d%% affinity with you</string>
+    <string name="community_user_match_percentage">%1$d%% match</string>
     <string name="community_user_birthyear">Birth year: %1$s</string>
     <string name="community_user_preferred_genres">Favorite genres:</string>
     <string name="community_user_default_name">Player Profile</string>
@@ -217,6 +236,10 @@
     <string name="profile_delete_account_dialog_desc">This action is permanent and will delete all your favorites and preferences from Firebase.</string>
     <string name="profile_confirm_delete">Confirm Delete</string>
     <string name="profile_account_deleted">Account deleted</string>
+    <string name="profile_sync_success">Success! Synchronized %1$d games with IGDB.</string>
+    <string name="profile_sync_error">Error synchronizing with IGDB</string>
+    <string name="profile_save_error">Error saving profile</string>
+    <string name="profile_delete_error">Error deleting account</string>
 
     <!-- Community Messages & Modals -->
     <string name="community_expand_games_cd">Expand games</string>
@@ -237,10 +260,34 @@
     <string name="community_create_room_error">Error creating room</string>
     <string name="community_update_room_error">Error updating room</string>
     <string name="community_delete_room_error">Error deleting room</string>
+    <string name="community_default_host_name">Host</string>
+
+    <string name="detail_error_comment_required">Please write a comment before publishing</string>
+    <string name="detail_review_published_success">Review published successfully!</string>
+    <string name="detail_review_publish_error">Error publishing review</string>
+    <string name="detail_review_updated_success">Review updated!</string>
+    <string name="detail_review_update_error">Error updating review</string>
+    <string name="detail_review_deleted_success">Review deleted</string>
+    <string name="detail_review_delete_error">Error deleting review</string>
+    <string name="detail_error_load_reviews">Error loading reviews</string>
+
+    <string name="favorites_error_load">Could not load your matches</string>
+
+    <string name="discover_error_load_favorites">Error loading favorites</string>
+
+    <string name="login_subtitle">Find your next favorite game</string>
+    <string name="auth_cd_toggle_password">Show or hide password</string>
+    <string name="detail_steam_open_error">Could not open the Steam store</string>
+    <string name="detail_star_cd">Star %1$d</string>
+    <string name="discover_search_cd">Search</string>
+    <string name="cd_remove_favorite">Remove from favorites</string>
+    <string name="cd_add_favorite">Add to favorites</string>
+    <string name="profile_edit_cd">Edit Profile</string>
 
     <!-- Swipe -->
     <string name="swipe_empty_title">No games available in the catalog.</string>
-    <string name="swipe_empty_subtitle">Sync the catalog from your profile (Admin).</string>
+    <string name="swipe_empty_subtitle">Sync the catalog from your profile (Admin) or tap Load games.</string>
+    <string name="swipe_reload_button">Load games</string>
     <string name="swipe_saved_favorites">Saved to favorites!</string>
     <string name="swipe_undo_success">Undone and removed from favorites</string>
     <string name="swipe_undo_empty">No history to undo</string>

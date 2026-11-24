@@ -2,11 +2,13 @@ package com.pamn.gamematch.ui.community
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pamn.gamematch.R
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.model.GameRoom
 import com.pamn.gamematch.data.model.UserProfile
 import com.pamn.gamematch.data.repository.CommunityRepository
 import com.pamn.gamematch.data.repository.GameRepository
+import com.pamn.gamematch.utils.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,9 +21,15 @@ enum class RoomFilter {
     FAVORITES_ONLY
 }
 
+enum class UserFilter {
+    ALL,
+    FOLLOWING_ONLY
+}
+
 data class CommunityUiState(
     val selectedTab: Int = 0, // 0: Salas de Juego, 1: Mis Salas, 2: Jugadores Afines
     val userMatches: List<UserProfile> = emptyList(),
+    val filteredUserMatches: List<UserProfile> = emptyList(),
     val currentUserProfile: UserProfile? = null,
     val rooms: List<GameRoom> = emptyList(),
     val filteredRooms: List<GameRoom> = emptyList(),
@@ -29,24 +37,26 @@ data class CommunityUiState(
     val followingUserIds: Set<String> = emptySet(),
     val likedGameTitles: Set<String> = emptySet(),
     val searchGameQuery: String = "",
+    val searchUserQuery: String = "",
     val roomFilter: RoomFilter = RoomFilter.ALL,
+    val userFilter: UserFilter = UserFilter.ALL,
     val isLoadingUsers: Boolean = false,
     val isLoadingRooms: Boolean = false,
     val isCreatingRoom: Boolean = false,
     val isActionInProgress: Boolean = false,
-    val errorMessage: String? = null,
-    val successMessage: String? = null
+    val errorMessage: UiText? = null,
+    val successMessage: UiText? = null
 )
 
 class CommunityViewModel(
-    private val communityRepository: CommunityRepository = CommunityRepository(),
-    private val gameRepository: GameRepository = GameRepository()
+    private val communityRepository: CommunityRepository,
+    private val gameRepository: GameRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityUiState())
     val uiState: StateFlow<CommunityUiState> = _uiState.asStateFlow()
 
-    init {
+    fun loadInitialData() {
         loadCatalogGames()
         loadLikedGames()
         loadFollowingUserIds()
@@ -60,12 +70,23 @@ class CommunityViewModel(
 
     fun setRoomFilter(filter: RoomFilter) {
         _uiState.update { it.copy(roomFilter = filter) }
-        applyRoomFilters()
+        loadFollowingUserIds()
+        loadRooms()
+    }
+
+    fun setUserFilter(filter: UserFilter) {
+        _uiState.update { it.copy(userFilter = filter) }
+        applyUserFilters()
     }
 
     fun onSearchGameQueryChanged(query: String) {
         _uiState.update { it.copy(searchGameQuery = query) }
         applyRoomFilters()
+    }
+
+    fun onSearchUserQueryChanged(query: String) {
+        _uiState.update { it.copy(searchUserQuery = query) }
+        applyUserFilters()
     }
 
     fun loadCatalogGames() {
@@ -95,6 +116,7 @@ class CommunityViewModel(
             communityRepository.getFollowingUserIds().onSuccess { ids ->
                 _uiState.update { it.copy(followingUserIds = ids.toSet()) }
                 applyRoomFilters()
+                applyUserFilters()
             }
         }
     }
@@ -133,12 +155,14 @@ class CommunityViewModel(
                             isLoadingUsers = false
                         )
                     }
+                    applyUserFilters()
                 }
                 .onFailure { error ->
                     _uiState.update { state ->
                         state.copy(
                             isLoadingUsers = false,
-                            errorMessage = error.message ?: "Error al cargar los usuarios"
+                            errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) }
+                                ?: UiText.StringResource(R.string.community_load_users_error)
                         )
                     }
                 }
@@ -163,7 +187,8 @@ class CommunityViewModel(
                     _uiState.update { state ->
                         state.copy(
                             isLoadingRooms = false,
-                            errorMessage = error.message ?: "Error al cargar las salas"
+                            errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) }
+                                ?: UiText.StringResource(R.string.community_load_rooms_error)
                         )
                     }
                 }
@@ -179,18 +204,18 @@ class CommunityViewModel(
         val likedTitles = state.likedGameTitles
 
         val filtered = state.rooms.filter { room ->
-            // Excluir salas propias de la pestaña principal "Salas de Juego" (se gestionan en la pestaña "Mis Salas")
-            val isNotOwnRoom = room.hostId != currentUid
-
-            // Regla de visibilidad: si es solo para seguidos, el usuario actual debe seguir al host
+            val isOwnRoom = room.hostId == currentUid
             val isFollowingHost = room.hostId in following
-            val isVisible = !room.isFollowersOnly || isFollowingHost
+            val isMember = room.members.contains(currentUid)
+
+            // Visibilidad: La sala es visible si NO es solo seguidos, O si sigues al host, O si es tu propia sala, O si eres miembro
+            val isVisible = !room.isFollowersOnly || isFollowingHost || isOwnRoom || isMember
 
             // Regla de filtro activo en la pestaña:
             val passesChipFilter = when (filterMode) {
-                RoomFilter.ALL -> true
-                RoomFilter.FOLLOWING_ONLY -> isFollowingHost
-                RoomFilter.FAVORITES_ONLY -> likedTitles.any { title ->
+                RoomFilter.ALL -> !isOwnRoom
+                RoomFilter.FOLLOWING_ONLY -> isFollowingHost || room.isFollowersOnly
+                RoomFilter.FAVORITES_ONLY -> !isOwnRoom && likedTitles.any { title ->
                     title.equals(room.gameTitle, ignoreCase = true) || room.gameTitle.contains(title, ignoreCase = true)
                 }
             }
@@ -200,10 +225,32 @@ class CommunityViewModel(
                     room.gameTitle.contains(searchQuery, ignoreCase = true) ||
                     room.description.contains(searchQuery, ignoreCase = true)
 
-            isNotOwnRoom && isVisible && passesChipFilter && matchesSearch
+            isVisible && passesChipFilter && matchesSearch
         }
 
         _uiState.update { it.copy(filteredRooms = filtered) }
+    }
+
+    private fun applyUserFilters() {
+        val state = _uiState.value
+        val query = state.searchUserQuery.trim()
+        val filterMode = state.userFilter
+        val following = state.followingUserIds
+
+        val filtered = state.userMatches.filter { user ->
+            val matchesQuery = query.isEmpty() || user.username.contains(query, ignoreCase = true)
+            val passesFilter = when (filterMode) {
+                UserFilter.ALL -> true
+                UserFilter.FOLLOWING_ONLY -> user.uid in following
+            }
+            matchesQuery && passesFilter
+        }.sortedWith(
+            compareByDescending<UserProfile> { it.matchPercentage }
+                .thenByDescending { it.commonGenres.size }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.username }
+        )
+
+        _uiState.update { it.copy(filteredUserMatches = filtered) }
     }
 
     fun toggleFollowUser(targetUserId: String) {
@@ -224,7 +271,7 @@ class CommunityViewModel(
                     } else {
                         _uiState.value.followingUserIds + targetUserId
                     }
-                    val msg = if (isFollowing) "Has dejado de seguir a este usuario" else "¡Ahora sigues a este usuario!"
+                    val msg = if (isFollowing) UiText.StringResource(R.string.community_user_unfollow_success) else UiText.StringResource(R.string.community_user_follow_success)
                     _uiState.update { state ->
                         state.copy(
                             followingUserIds = updatedFollowing,
@@ -232,13 +279,15 @@ class CommunityViewModel(
                             successMessage = msg
                         )
                     }
-                    applyRoomFilters()
+                    applyUserFilters()
+                    loadRooms()
                 }
                 .onFailure { error ->
                     _uiState.update { state ->
                         state.copy(
                             isActionInProgress = false,
-                            errorMessage = error.message ?: "Error al actualizar seguimiento"
+                            errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) }
+                                ?: UiText.StringResource(R.string.community_follow_error)
                         )
                     }
                 }
@@ -252,11 +301,11 @@ class CommunityViewModel(
         viewModelScope.launch {
             communityRepository.joinRoom(roomId, currentUid)
                 .onSuccess {
-                    _uiState.update { it.copy(isActionInProgress = false, successMessage = "¡Te has unido a la sala!") }
+                    _uiState.update { it.copy(isActionInProgress = false, successMessage = UiText.StringResource(R.string.community_joined_room_success)) }
                     loadRooms()
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isActionInProgress = false, errorMessage = error.message ?: "Error al unirte a la sala") }
+                    _uiState.update { it.copy(isActionInProgress = false, errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.community_join_room_error)) }
                 }
         }
     }
@@ -268,11 +317,11 @@ class CommunityViewModel(
         viewModelScope.launch {
             communityRepository.leaveRoom(roomId, currentUid)
                 .onSuccess {
-                    _uiState.update { it.copy(isActionInProgress = false, successMessage = "Has salido de la sala") }
+                    _uiState.update { it.copy(isActionInProgress = false, successMessage = UiText.StringResource(R.string.community_left_room_success)) }
                     loadRooms()
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isActionInProgress = false, errorMessage = error.message ?: "Error al salir de la sala") }
+                    _uiState.update { it.copy(isActionInProgress = false, errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.community_leave_room_error)) }
                 }
         }
     }
@@ -286,7 +335,7 @@ class CommunityViewModel(
                     _uiState.update {
                         it.copy(
                             isActionInProgress = false,
-                            successMessage = "Miembro expulsado de la sala con éxito"
+                            successMessage = UiText.StringResource(R.string.community_member_removed_success)
                         )
                     }
                     loadRooms()
@@ -295,7 +344,8 @@ class CommunityViewModel(
                     _uiState.update {
                         it.copy(
                             isActionInProgress = false,
-                            errorMessage = error.message ?: "Error al expulsar al miembro"
+                            errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) }
+                                ?: UiText.StringResource(R.string.community_remove_member_error)
                         )
                     }
                 }
@@ -317,16 +367,17 @@ class CommunityViewModel(
         contactInfo: String,
         maxPlayers: Int,
         isFollowersOnly: Boolean,
+        defaultHostName: String,
         onComplete: (Boolean) -> Unit
     ) {
         if (gameTitle.isBlank() || description.isBlank() || contactInfo.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor, completa todos los campos requeridos") }
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.community_fields_required_error)) }
             onComplete(false)
             return
         }
 
         val currentUser = _uiState.value.currentUserProfile
-        val hostName = currentUser?.username?.ifBlank { "Anfitrión" } ?: "Anfitrión"
+        val hostName = currentUser?.username?.ifBlank { defaultHostName } ?: defaultHostName
         val hostId = currentUser?.uid ?: communityRepository.getCurrentUserId() ?: ""
 
         val newRoom = GameRoom(
@@ -350,13 +401,13 @@ class CommunityViewModel(
             _uiState.update { it.copy(isCreatingRoom = false) }
             result
                 .onSuccess {
-                    _uiState.update { state -> state.copy(successMessage = "¡Sala creada con éxito!") }
+                    _uiState.update { state -> state.copy(successMessage = UiText.StringResource(R.string.community_room_created_success)) }
                     loadRooms()
                     onComplete(true)
                 }
                 .onFailure { error ->
                     _uiState.update { state ->
-                        state.copy(errorMessage = error.message ?: "Error al crear la sala")
+                        state.copy(errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.community_create_room_error))
                     }
                     onComplete(false)
                 }
@@ -374,7 +425,7 @@ class CommunityViewModel(
         onComplete: (Boolean) -> Unit
     ) {
         if (gameTitle.isBlank() || description.isBlank() || contactInfo.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor, completa todos los campos requeridos") }
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.community_fields_required_error)) }
             onComplete(false)
             return
         }
@@ -396,13 +447,13 @@ class CommunityViewModel(
 
             result
                 .onSuccess {
-                    _uiState.update { state -> state.copy(successMessage = "¡Sala actualizada con éxito!") }
+                    _uiState.update { state -> state.copy(successMessage = UiText.StringResource(R.string.community_room_updated_success)) }
                     loadRooms()
                     onComplete(true)
                 }
                 .onFailure { error ->
                     _uiState.update { state ->
-                        state.copy(errorMessage = error.message ?: "Error al actualizar la sala")
+                        state.copy(errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.community_update_room_error))
                     }
                     onComplete(false)
                 }
@@ -418,12 +469,12 @@ class CommunityViewModel(
 
             result
                 .onSuccess {
-                    _uiState.update { state -> state.copy(successMessage = "¡Sala eliminada con éxito!") }
+                    _uiState.update { state -> state.copy(successMessage = UiText.StringResource(R.string.community_room_deleted_success)) }
                     loadRooms()
                 }
                 .onFailure { error ->
                     _uiState.update { state ->
-                        state.copy(errorMessage = error.message ?: "Error al eliminar la sala")
+                        state.copy(errorMessage = error.localizedMessage?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.community_delete_room_error))
                     }
                 }
         }

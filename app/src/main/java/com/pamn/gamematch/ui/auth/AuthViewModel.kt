@@ -1,9 +1,5 @@
 package com.pamn.gamematch.ui.auth
 
-import android.util.Patterns
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
@@ -12,39 +8,46 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.pamn.gamematch.R
 import com.pamn.gamematch.data.repository.AuthRepository
 import com.pamn.gamematch.utils.UiText
+import com.pamn.gamematch.utils.ValidationUtils
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+data class AuthUiState(
+    val isLoading: Boolean = false,
+    val errorMessage: UiText? = null
+)
 
 class AuthViewModel(
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    var isLoading by mutableStateOf(false)
-        private set
-
-    var errorMessage by mutableStateOf<UiText?>(null)
-        private set
+    private val _uiState = MutableStateFlow(AuthUiState())
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun login(email: String, pass: String, onSuccess: () -> Unit) {
         val trimmedEmail = email.trim()
 
         if (trimmedEmail.isBlank() || pass.isBlank()) {
-            errorMessage = UiText.StringResource(R.string.auth_error_fill_all_fields)
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.auth_error_fill_all_fields)) }
             return
         }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
-            errorMessage = UiText.StringResource(R.string.auth_error_invalid_email_format)
+        if (!ValidationUtils.isValidEmail(trimmedEmail)) {
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.auth_error_invalid_email_format)) }
             return
         }
 
-        isLoading = true
-        errorMessage = null
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         authRepository.login(trimmedEmail, pass) { success, exception ->
-            isLoading = false
             if (success) {
+                _uiState.update { it.copy(isLoading = false) }
                 onSuccess()
             } else {
-                errorMessage = mapAuthException(exception, trimmedEmail)
+                val error = mapAuthException(exception, trimmedEmail)
+                _uiState.update { it.copy(isLoading = false, errorMessage = error) }
             }
         }
     }
@@ -53,34 +56,34 @@ class AuthViewModel(
         val trimmedEmail = email.trim()
 
         if (trimmedEmail.isBlank() || pass.isBlank() || confirmPass.isBlank()) {
-            errorMessage = UiText.StringResource(R.string.auth_error_fill_all_fields)
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.auth_error_fill_all_fields)) }
             return
         }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
-            errorMessage = UiText.StringResource(R.string.auth_error_invalid_email_format)
+        if (!ValidationUtils.isValidEmail(trimmedEmail)) {
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.auth_error_invalid_email_format)) }
             return
         }
 
         if (pass.length < 6) {
-            errorMessage = UiText.StringResource(R.string.auth_error_password_length)
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.auth_error_password_length)) }
             return
         }
 
         if (pass != confirmPass) {
-            errorMessage = UiText.StringResource(R.string.auth_error_passwords_dont_match)
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.auth_error_passwords_dont_match)) }
             return
         }
 
-        isLoading = true
-        errorMessage = null
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         authRepository.signUp(trimmedEmail, pass) { success, exception ->
-            isLoading = false
             if (success) {
+                _uiState.update { it.copy(isLoading = false) }
                 onSuccess()
             } else {
-                errorMessage = mapAuthException(exception, trimmedEmail)
+                val error = mapAuthException(exception, trimmedEmail)
+                _uiState.update { it.copy(isLoading = false, errorMessage = error) }
             }
         }
     }
@@ -123,18 +126,7 @@ class AuthViewModel(
         }
     }
 
-    // Calcula la fortaleza de la contraseña para la UI
-    fun getPasswordStrength(pass: String): Float {
-        if (pass.isEmpty()) return 0f
-        var score = 0f
-        if (pass.length >= 6) score += 0.35f
-        if (pass.length >= 8) score += 0.25f
-        if (pass.any { it.isDigit() }) score += 0.2f
-        if (pass.any { !it.isLetterOrDigit() }) score += 0.2f
-        return score.coerceAtMost(1f)
-    }
-
     fun clearError() {
-        errorMessage = null
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }

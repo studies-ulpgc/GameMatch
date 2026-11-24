@@ -1,31 +1,60 @@
 package com.pamn.gamematch.data.remote.mapper
 
 import com.pamn.gamematch.data.model.Game
-import com.pamn.gamematch.data.remote.dto.rawg.RawgGameDto
+import com.pamn.gamematch.data.remote.dto.igdb.IgdbGameDto
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-fun RawgGameDto.toDomain(): Game {
+fun IgdbGameDto.toDomain(): Game {
     val mappedGenres = genres?.mapNotNull { it.name.ifBlank { null } }?.joinToString(", ")
         ?.ifBlank { "Varios" } ?: "Varios"
 
-    val mappedPlatforms = platforms?.mapNotNull { wrapper ->
-        wrapper.platform?.name?.ifBlank { null }
-    } ?: listOf("PC", "PlayStation", "Xbox", "Nintendo")
+    val mappedPlatforms = platforms?.mapNotNull { it.name.ifBlank { null } } ?: emptyList()
 
-    val formattedReleaseDate = released?.ifBlank { "Por anunciar" } ?: "Por anunciar"
+    val formattedReleaseDate = if (firstReleaseDate != null && firstReleaseDate > 0) {
+        val date = Date(firstReleaseDate * 1000L)
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        sdf.format(date)
+    } else {
+        "Por anunciar"
+    }
+
+    val coverUrl = cover?.imageId?.let { imgId ->
+        "https://images.igdb.com/igdb/image/upload/t_720p/$imgId.jpg"
+    } ?: "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg"
+
+    val steamAppId = externalGames
+        ?.filter { it.externalGameSource == 1 || it.category == 1 }
+        ?.firstNotNullOfOrNull { eg ->
+            eg.uid?.split(',')?.firstOrNull()?.trim()?.toIntOrNull()
+        }
+
+    // IGDB rating es de 0 a 100. Escalar a formato 0.0 - 5.0 para GameMatch
+    val rawRating = rating ?: 0.0
+    val normalizedRating = (rawRating / 20.0).let { Math.round(it * 10.0) / 10.0 }
+    val finalRating = if (normalizedRating <= 0.0) 4.2 else normalizedRating
+
+    val (isFeaturedFlag, isTrendingFlag) = computeFlags(
+        rating = rating,
+        ratingCount = ratingCount,
+        firstReleaseDateSeconds = firstReleaseDate
+    )
 
     return Game(
         id = id.toString(),
         title = name,
-        description = "",
-        imageUrl = backgroundImage ?: "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
+        description = summary ?: "",
+        imageUrl = coverUrl,
         genre = mappedGenres,
         price = null,
         releaseDate = formattedReleaseDate,
-        isReleased = !released.isNullOrBlank(),
+        isReleased = firstReleaseDate != null && (firstReleaseDate * 1000L) <= System.currentTimeMillis(),
         platforms = mappedPlatforms,
-        steamAppId = null,
-        rating = rating ?: 0.0,
-        isFeatured = (rating ?: 0.0) >= 4.0,
-        isTrending = (rating ?: 0.0) >= 3.5
+        steamAppId = steamAppId,
+        rating = finalRating,
+        ratingCount = ratingCount,
+        isFeatured = isFeaturedFlag,
+        isTrending = isTrendingFlag
     )
 }

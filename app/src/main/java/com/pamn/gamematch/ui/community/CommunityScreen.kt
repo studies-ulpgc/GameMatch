@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -75,27 +76,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pamn.gamematch.R
 import com.pamn.gamematch.data.model.Game
 import com.pamn.gamematch.data.model.GameRoom
 import com.pamn.gamematch.data.model.UserProfile
 import com.pamn.gamematch.ui.discover.PLATFORM_OPTIONS
 import com.pamn.gamematch.ui.theme.SteamAccentBlue
-import java.util.Locale
+import com.pamn.gamematch.utils.GenreUtils
+
+import com.pamn.gamematch.ui.AppViewModelProvider
 
 @Composable
 fun CommunityScreen(
     modifier: Modifier = Modifier,
-    viewModel: CommunityViewModel = viewModel()
+    viewModel: CommunityViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadInitialData()
+    }
     var showCreateRoomModal by remember { mutableStateOf(false) }
     var selectedUserForModal by remember { mutableStateOf<UserProfile?>(null) }
     var selectedRoomForEdit by remember { mutableStateOf<GameRoom?>(null) }
@@ -115,14 +124,14 @@ fun CommunityScreen(
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, error.asString(context), Toast.LENGTH_SHORT).show()
             viewModel.clearMessages()
         }
     }
 
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let { success ->
-            Toast.makeText(context, success, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, success.asString(context), Toast.LENGTH_SHORT).show()
             viewModel.clearMessages()
         }
     }
@@ -138,7 +147,7 @@ fun CommunityScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_fab_create)
+                        contentDescription = stringResource(R.string.community_fab_create)
                     )
                 }
             }
@@ -150,7 +159,7 @@ fun CommunityScreen(
                 .padding(innerPadding)
         ) {
             Text(
-                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_title),
+                text = stringResource(R.string.community_title),
                 style = MaterialTheme.typography.headlineLarge,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
             )
@@ -163,20 +172,20 @@ fun CommunityScreen(
                 Tab(
                     selected = uiState.selectedTab == 0,
                     onClick = { viewModel.selectTab(0) },
-                    text = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_tab_rooms)) },
-                    icon = { Icon(Icons.Default.SportsEsports, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_tab_rooms_icon)) }
+                    text = { Text(stringResource(R.string.community_tab_rooms)) },
+                    icon = { Icon(Icons.Default.SportsEsports, contentDescription = stringResource(R.string.community_tab_rooms_icon)) }
                 )
                 Tab(
                     selected = uiState.selectedTab == 1,
                     onClick = { viewModel.selectTab(1) },
-                    text = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_tab_my_rooms)) },
-                    icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_tab_my_rooms)) }
+                    text = { Text(stringResource(R.string.community_tab_my_rooms)) },
+                    icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = stringResource(R.string.community_tab_my_rooms)) }
                 )
                 Tab(
                     selected = uiState.selectedTab == 2,
                     onClick = { viewModel.selectTab(2) },
-                    text = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_tab_players)) },
-                    icon = { Icon(Icons.Default.People, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_tab_players_icon)) }
+                    text = { Text(stringResource(R.string.community_tab_players)) },
+                    icon = { Icon(Icons.Default.People, contentDescription = stringResource(R.string.community_tab_players_icon)) }
                 )
             }
 
@@ -192,7 +201,7 @@ fun CommunityScreen(
                     onDeleteRoom = { room -> selectedRoomForDelete = room },
                     onContactCopy = { contactInfo ->
                         clipboardManager.setText(AnnotatedString(contactInfo))
-                        val msg = context.resources.getString(com.pamn.gamematch.R.string.community_contact_copied, contactInfo)
+                        val msg = context.resources.getString(R.string.community_contact_copied, contactInfo)
                         Toast.makeText(
                             context,
                             msg,
@@ -214,6 +223,8 @@ fun CommunityScreen(
 
                 2 -> UserMatchTabContent(
                     uiState = uiState,
+                    onSearchQueryChange = viewModel::onSearchUserQueryChanged,
+                    onFilterChange = viewModel::setUserFilter,
                     onUserClick = { user -> selectedUserForModal = user },
                     onToggleFollow = viewModel::toggleFollowUser,
                     onRetry = viewModel::loadCommunityUsers
@@ -278,8 +289,8 @@ fun CommunityScreen(
     selectedRoomForDelete?.let { room ->
         AlertDialog(
             onDismissRequest = { selectedRoomForDelete = null },
-            title = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_delete_room_title)) },
-            text = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_delete_room_confirm, room.gameTitle)) },
+            title = { Text(stringResource(R.string.community_delete_room_title)) },
+            text = { Text(stringResource(R.string.community_delete_room_confirm, room.gameTitle)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -288,12 +299,12 @@ fun CommunityScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_delete))
+                    Text(stringResource(R.string.community_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { selectedRoomForDelete = null }) {
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_cancel))
+                    Text(stringResource(R.string.community_cancel))
                 }
             }
         )
@@ -301,12 +312,13 @@ fun CommunityScreen(
 
     // Modal de Crear Sala
     if (showCreateRoomModal) {
+        val defaultHostName = stringResource(R.string.community_default_host_name)
         CreateRoomModal(
             catalogGames = uiState.catalogGames,
             isPublishing = uiState.isCreatingRoom,
             onDismiss = { showCreateRoomModal = false },
             onPublish = { gameTitle, description, platform, contactInfo, maxPlayers, isFollowersOnly ->
-                viewModel.createRoom(gameTitle, description, platform, contactInfo, maxPlayers, isFollowersOnly) { success ->
+                viewModel.createRoom(gameTitle, description, platform, contactInfo, maxPlayers, isFollowersOnly, defaultHostName) { success ->
                     if (success) {
                         showCreateRoomModal = false
                     }
@@ -346,7 +358,7 @@ private fun MyRoomsTabContent(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_my_rooms_empty),
+                    text = stringResource(R.string.community_my_rooms_empty),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
@@ -354,13 +366,13 @@ private fun MyRoomsTabContent(
                     onClick = onCreateRoomClick,
                     modifier = Modifier.padding(top = 12.dp)
                 ) {
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_create_room_btn))
+                    Text(stringResource(R.string.community_create_room_btn))
                 }
                 TextButton(
                     onClick = onRetry,
                     modifier = Modifier.padding(top = 4.dp)
                 ) {
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_reload))
+                    Text(stringResource(R.string.community_reload))
                 }
             }
         }
@@ -439,7 +451,7 @@ private fun MyRoomHostCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Anfitrión (Tú)",
+                    text = stringResource(R.string.community_host_you),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.secondary
@@ -463,7 +475,7 @@ private fun MyRoomHostCard(
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_followers_only),
+                                    text = stringResource(R.string.community_room_followers_only),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer
                                 )
@@ -507,11 +519,11 @@ private fun MyRoomHostCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Group,
-                        contentDescription = "Ver Miembros",
+                        contentDescription = stringResource(R.string.community_room_view_members),
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_view_members_count, room.members.size), style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.community_room_view_members_count, room.members.size), style = MaterialTheme.typography.labelMedium)
                 }
 
                 IconButton(
@@ -520,7 +532,7 @@ private fun MyRoomHostCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_edit),
+                        contentDescription = stringResource(R.string.community_room_edit),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -531,7 +543,7 @@ private fun MyRoomHostCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_delete),
+                        contentDescription = stringResource(R.string.community_room_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
@@ -563,7 +575,7 @@ private fun RoomMembersModal(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_members_title, room.gameTitle),
+                text = stringResource(R.string.community_room_members_title, room.gameTitle),
                 style = MaterialTheme.typography.headlineMedium
             )
         },
@@ -578,7 +590,7 @@ private fun RoomMembersModal(
                     CircularProgressIndicator()
                 }
             } else if (membersList.isEmpty()) {
-                Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_members_empty))
+                Text(stringResource(R.string.community_room_members_empty))
             } else {
                 LazyColumn(
                     modifier = Modifier
@@ -606,7 +618,7 @@ private fun RoomMembersModal(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
-                                            text = member.username.take(1).uppercase(Locale.getDefault()).ifBlank { "U" },
+                                            text = member.username.take(1).uppercase().ifBlank { "U" },
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -615,7 +627,7 @@ private fun RoomMembersModal(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text(
-                                        text = if (isHostMember) "${member.username} (${androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_host_you)})" else member.username,
+                                        text = if (isHostMember) "${member.username} (${stringResource(R.string.community_host_you)})" else member.username,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = if (isHostMember) FontWeight.Bold else FontWeight.Normal,
                                         maxLines = 1,
@@ -636,7 +648,7 @@ private fun RoomMembersModal(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.PersonRemove,
-                                        contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_kick_member),
+                                        contentDescription = stringResource(R.string.community_kick_member),
                                         tint = MaterialTheme.colorScheme.error
                                     )
                                 }
@@ -648,7 +660,7 @@ private fun RoomMembersModal(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_close))
+                Text(stringResource(R.string.community_close))
             }
         }
     )
@@ -675,11 +687,11 @@ private fun RoomsTabContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_search_placeholder)) },
+            placeholder = { Text(stringResource(R.string.community_search_placeholder)) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_search_cd)
+                    contentDescription = stringResource(R.string.community_search_cd)
                 )
             },
             trailingIcon = {
@@ -687,7 +699,7 @@ private fun RoomsTabContent(
                     IconButton(onClick = { onSearchQueryChange("") }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_clear_search_cd)
+                            contentDescription = stringResource(R.string.community_clear_search_cd)
                         )
                     }
                 }
@@ -711,7 +723,7 @@ private fun RoomsTabContent(
                 FilterChip(
                     selected = uiState.roomFilter == RoomFilter.ALL,
                     onClick = { onFilterChange(RoomFilter.ALL) },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_filter_all)) },
+                    label = { Text(stringResource(R.string.community_filter_all)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -722,7 +734,7 @@ private fun RoomsTabContent(
                 FilterChip(
                     selected = uiState.roomFilter == RoomFilter.FOLLOWING_ONLY,
                     onClick = { onFilterChange(RoomFilter.FOLLOWING_ONLY) },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_filter_following)) },
+                    label = { Text(stringResource(R.string.community_filter_following)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -733,7 +745,7 @@ private fun RoomsTabContent(
                 FilterChip(
                     selected = uiState.roomFilter == RoomFilter.FAVORITES_ONLY,
                     onClick = { onFilterChange(RoomFilter.FAVORITES_ONLY) },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_filter_favorites)) },
+                    label = { Text(stringResource(R.string.community_filter_favorites)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -759,9 +771,9 @@ private fun RoomsTabContent(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = when (uiState.roomFilter) {
-                            RoomFilter.FOLLOWING_ONLY -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_empty_following)
-                            RoomFilter.FAVORITES_ONLY -> androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_empty_favorites)
-                            RoomFilter.ALL -> if (uiState.searchGameQuery.isNotBlank()) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_empty_search, uiState.searchGameQuery) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_empty_all)
+                            RoomFilter.FOLLOWING_ONLY -> stringResource(R.string.community_empty_following)
+                            RoomFilter.FAVORITES_ONLY -> stringResource(R.string.community_empty_favorites)
+                            RoomFilter.ALL -> if (uiState.searchGameQuery.isNotBlank()) stringResource(R.string.community_empty_search, uiState.searchGameQuery) else stringResource(R.string.community_empty_all)
                         },
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
@@ -770,7 +782,7 @@ private fun RoomsTabContent(
                         onClick = onRetry,
                         modifier = Modifier.padding(top = 12.dp)
                     ) {
-                        Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_retry))
+                        Text(stringResource(R.string.community_retry))
                     }
                 }
             }
@@ -864,7 +876,7 @@ private fun RoomCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_host, room.hostName),
+                    text = stringResource(R.string.community_room_host, room.hostName),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -887,7 +899,7 @@ private fun RoomCard(
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_followers_only),
+                                    text = stringResource(R.string.community_room_followers_only),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer
                                 )
@@ -933,11 +945,11 @@ private fun RoomCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_contact_copy_cd),
+                            contentDescription = stringResource(R.string.community_contact_copy_cd),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_contact_btn), style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.community_contact_btn), style = MaterialTheme.typography.labelMedium)
                     }
 
                     IconButton(
@@ -946,7 +958,7 @@ private fun RoomCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_edit),
+                            contentDescription = stringResource(R.string.community_room_edit),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -957,7 +969,7 @@ private fun RoomCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_delete),
+                            contentDescription = stringResource(R.string.community_room_delete),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
@@ -973,11 +985,11 @@ private fun RoomCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_contact_copy_cd),
+                            contentDescription = stringResource(R.string.community_contact_copy_cd),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_contact_btn))
+                        Text(stringResource(R.string.community_contact_btn))
                     }
 
                     Button(
@@ -986,7 +998,7 @@ private fun RoomCard(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_leave))
+                        Text(stringResource(R.string.community_room_leave))
                     }
                 }
             } else {
@@ -995,7 +1007,7 @@ private fun RoomCard(
                     enabled = !isFull && !isActionInProgress,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (isFull) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_full) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_room_join))
+                    Text(if (isFull) stringResource(R.string.community_room_full) else stringResource(R.string.community_room_join))
                 }
             }
         }
@@ -1006,53 +1018,135 @@ private fun RoomCard(
 @Composable
 private fun UserMatchTabContent(
     uiState: CommunityUiState,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterChange: (UserFilter) -> Unit,
     onUserClick: (UserProfile) -> Unit,
     onToggleFollow: (String) -> Unit,
     onRetry: () -> Unit
 ) {
-    if (uiState.isLoadingUsers) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-    } else if (uiState.userMatches.isEmpty()) {
-        Box(
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(uiState.userFilter, uiState.searchUserQuery) {
+        listState.scrollToItem(0)
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Buscador superior por usuario
+        OutlinedTextField(
+            value = uiState.searchUserQuery,
+            onValueChange = onSearchQueryChange,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_empty_users),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = { Text(stringResource(R.string.community_search_users_placeholder)) },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(R.string.community_search_users_cd)
                 )
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.padding(top = 12.dp)
-                ) {
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_retry))
+            },
+            trailingIcon = {
+                if (uiState.searchUserQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.community_clear_search_cd)
+                        )
+                    }
                 }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            )
+        )
+
+        // Chips de Filtro (Todos / Siguiendo)
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                FilterChip(
+                    selected = uiState.userFilter == UserFilter.ALL,
+                    onClick = { onFilterChange(UserFilter.ALL) },
+                    label = { Text(stringResource(R.string.community_user_filter_all)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
+            item {
+                FilterChip(
+                    selected = uiState.userFilter == UserFilter.FOLLOWING_ONLY,
+                    onClick = { onFilterChange(UserFilter.FOLLOWING_ONLY) },
+                    label = { Text(stringResource(R.string.community_user_filter_following)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
             }
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(uiState.userMatches, key = { it.uid }) { user ->
-                val isFollowing = uiState.followingUserIds.contains(user.uid)
-                UserMatchCard(
-                    user = user,
-                    isFollowing = isFollowing,
-                    isActionInProgress = uiState.isActionInProgress,
-                    onClick = { onUserClick(user) },
-                    onToggleFollow = { onToggleFollow(user.uid) }
-                )
+
+        if (uiState.isLoadingUsers) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (uiState.filteredUserMatches.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val emptyText = when {
+                        uiState.userFilter == UserFilter.FOLLOWING_ONLY ->
+                            stringResource(R.string.community_empty_users_following)
+                        uiState.searchUserQuery.isNotBlank() ->
+                            stringResource(R.string.community_empty_users_search, uiState.searchUserQuery)
+                        else ->
+                            stringResource(R.string.community_empty_users)
+                    }
+                    Text(
+                        text = emptyText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    Button(
+                        onClick = onRetry,
+                        modifier = Modifier.padding(top = 12.dp)
+                    ) {
+                        Text(stringResource(R.string.community_retry))
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(uiState.filteredUserMatches, key = { it.uid }) { user ->
+                    val isFollowing = uiState.followingUserIds.contains(user.uid)
+                    UserMatchCard(
+                        user = user,
+                        isFollowing = isFollowing,
+                        isActionInProgress = uiState.isActionInProgress,
+                        onClick = { onUserClick(user) },
+                        onToggleFollow = { onToggleFollow(user.uid) }
+                    )
+                }
             }
         }
     }
@@ -1088,7 +1182,7 @@ private fun UserMatchCard(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = user.username.take(1).uppercase(Locale.getDefault()).ifBlank { "U" },
+                        text = user.username.take(1).uppercase().ifBlank { "U" },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1105,7 +1199,7 @@ private fun UserMatchCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = user.username.ifBlank { androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_default_name) },
+                        text = user.username.ifBlank { stringResource(R.string.community_user_default_name) },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -1119,7 +1213,7 @@ private fun UserMatchCard(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "${user.matchPercentage}% Match",
+                            text = stringResource(R.string.community_user_match_percentage, user.matchPercentage),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimary,
@@ -1136,7 +1230,7 @@ private fun UserMatchCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_language, user.language),
+                        text = stringResource(R.string.community_user_language, user.language),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1155,7 +1249,7 @@ private fun UserMatchCard(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_following), style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.community_user_following), style = MaterialTheme.typography.labelSmall)
                         }
                     } else {
                         Button(
@@ -1170,7 +1264,7 @@ private fun UserMatchCard(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_follow), style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.community_user_follow), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -1183,7 +1277,7 @@ private fun UserMatchCard(
                         user.commonGenres.take(3).forEach { genre ->
                             AssistChip(
                                 onClick = {},
-                                label = { Text(genre, style = MaterialTheme.typography.labelSmall) }
+                                label = { Text(GenreUtils.getLocalizedGenre(genre), style = MaterialTheme.typography.labelSmall) }
                             )
                         }
                     }
@@ -1205,30 +1299,30 @@ private fun UserDetailModal(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = user.username.ifBlank { androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_default_name) },
+                text = user.username.ifBlank { stringResource(R.string.community_user_default_name) },
                 style = MaterialTheme.typography.headlineMedium
             )
         },
         text = {
             Column {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_affinity, user.matchPercentage),
+                    text = stringResource(R.string.community_user_affinity, user.matchPercentage),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_language, user.language))
+                Text(text = stringResource(R.string.community_user_language, user.language))
                 if (user.birthYear.isNotBlank()) {
-                    Text(text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_birthyear, user.birthYear))
+                    Text(text = stringResource(R.string.community_user_birthyear, user.birthYear))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 if (user.preferredGenres.isNotEmpty()) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_preferred_genres),
+                        text = stringResource(R.string.community_user_preferred_genres),
                         fontWeight = FontWeight.Bold
                     )
-                    Text(text = user.preferredGenres.joinToString(", "))
+                    Text(text = user.preferredGenres.map { GenreUtils.getLocalizedGenre(it) }.joinToString(", "))
                 }
             }
         },
@@ -1237,12 +1331,12 @@ private fun UserDetailModal(
                 onClick = onToggleFollow,
                 enabled = !isActionInProgress
             ) {
-                Text(if (isFollowing) androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_unfollowed) else androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_user_follow_user))
+                Text(if (isFollowing) stringResource(R.string.community_user_unfollowed) else stringResource(R.string.community_user_follow_user))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_close))
+                Text(stringResource(R.string.community_close))
             }
         }
     )
@@ -1268,12 +1362,12 @@ private fun CreateRoomModal(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_create_room_title)) },
+        title = { Text(stringResource(R.string.community_create_room_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Selector o Campo de Juego
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_game_title_label),
+                    text = stringResource(R.string.community_game_title_label),
                     style = MaterialTheme.typography.labelLarge
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1284,11 +1378,11 @@ private fun CreateRoomModal(
                         onValueChange = { gameTitle = it },
                         trailingIcon = {
                             IconButton(onClick = { expandedGameDropdown = true }) {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_expand_games_cd))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.community_expand_games_cd))
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_game_title_placeholder)) }
+                        placeholder = { Text(stringResource(R.string.community_game_title_placeholder)) }
                     )
 
                     DropdownMenu(
@@ -1311,7 +1405,7 @@ private fun CreateRoomModal(
 
                 // Selector de Plataforma
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_platform_label),
+                    text = stringResource(R.string.community_platform_label),
                     style = MaterialTheme.typography.labelLarge
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1323,7 +1417,7 @@ private fun CreateRoomModal(
                         readOnly = true,
                         trailingIcon = {
                             IconButton(onClick = { expandedPlatformDropdown = true }) {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_expand_platforms_cd))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.community_expand_platforms_cd))
                             }
                         },
                         modifier = Modifier
@@ -1353,8 +1447,8 @@ private fun CreateRoomModal(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_desc_label)) },
-                    placeholder = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_desc_placeholder)) },
+                    label = { Text(stringResource(R.string.community_desc_label)) },
+                    placeholder = { Text(stringResource(R.string.community_desc_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     maxLines = 3
@@ -1366,8 +1460,8 @@ private fun CreateRoomModal(
                 OutlinedTextField(
                     value = contactInfo,
                     onValueChange = { contactInfo = it },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_contact_label)) },
-                    placeholder = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_contact_placeholder)) },
+                    label = { Text(stringResource(R.string.community_contact_label)) },
+                    placeholder = { Text(stringResource(R.string.community_contact_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -1381,7 +1475,7 @@ private fun CreateRoomModal(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_followers_only_switch),
+                        text = stringResource(R.string.community_followers_only_switch),
                         style = MaterialTheme.typography.labelLarge
                     )
                     Switch(
@@ -1399,7 +1493,7 @@ private fun CreateRoomModal(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_max_players_label),
+                        text = stringResource(R.string.community_max_players_label),
                         style = MaterialTheme.typography.labelLarge
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1438,13 +1532,13 @@ private fun CreateRoomModal(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_publish_room_btn))
+                    Text(stringResource(R.string.community_publish_room_btn))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isPublishing) {
-                Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_cancel))
+                Text(stringResource(R.string.community_cancel))
             }
         }
     )
@@ -1471,12 +1565,12 @@ private fun EditRoomModal(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_edit_room_title)) },
+        title = { Text(stringResource(R.string.community_edit_room_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Selector o Campo de Juego
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_game_title_label),
+                    text = stringResource(R.string.community_game_title_label),
                     style = MaterialTheme.typography.labelLarge
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1487,7 +1581,7 @@ private fun EditRoomModal(
                         onValueChange = { gameTitle = it },
                         trailingIcon = {
                             IconButton(onClick = { expandedGameDropdown = true }) {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_expand_games_cd))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.community_expand_games_cd))
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -1513,7 +1607,7 @@ private fun EditRoomModal(
 
                 // Selector de Plataforma
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_platform_label),
+                    text = stringResource(R.string.community_platform_label),
                     style = MaterialTheme.typography.labelLarge
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1525,7 +1619,7 @@ private fun EditRoomModal(
                         readOnly = true,
                         trailingIcon = {
                             IconButton(onClick = { expandedPlatformDropdown = true }) {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_expand_platforms_cd))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.community_expand_platforms_cd))
                             }
                         },
                         modifier = Modifier
@@ -1555,7 +1649,7 @@ private fun EditRoomModal(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_desc_label)) },
+                    label = { Text(stringResource(R.string.community_desc_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     maxLines = 3
@@ -1567,7 +1661,7 @@ private fun EditRoomModal(
                 OutlinedTextField(
                     value = contactInfo,
                     onValueChange = { contactInfo = it },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_contact_label)) },
+                    label = { Text(stringResource(R.string.community_contact_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -1581,7 +1675,7 @@ private fun EditRoomModal(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_followers_only_switch),
+                        text = stringResource(R.string.community_followers_only_switch),
                         style = MaterialTheme.typography.labelLarge
                     )
                     Switch(
@@ -1599,7 +1693,7 @@ private fun EditRoomModal(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_max_players_label),
+                        text = stringResource(R.string.community_max_players_label),
                         style = MaterialTheme.typography.labelLarge
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1638,13 +1732,13 @@ private fun EditRoomModal(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_save_changes_btn))
+                    Text(stringResource(R.string.community_save_changes_btn))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isSaving) {
-                Text(androidx.compose.ui.res.stringResource(com.pamn.gamematch.R.string.community_cancel))
+                Text(stringResource(R.string.community_cancel))
             }
         }
     )
