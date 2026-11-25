@@ -1,0 +1,13 @@
+# Copia este archivo como `local.properties` en la raíz del proyecto y completa tus valores locales.
+# Nunca subas `local.properties` al repositorio (está ignorado en `.gitignore`).
+
+# Ruta al Android SDK local (Android Studio la genera automáticamente al abrir el proyecto)
+# Ejemplos:
+#   Windows: C\:\\Users\\<usuario>\\AppData\\Local\\Android\\Sdk
+#   macOS:   /Users/<usuario>/Library/Android/sdk
+#   Linux:   /home/<usuario>/Android/Sdk
+sdk.dir=/ruta/a/tu/Android/Sdk
+
+# Credenciales de Twitch/IGDB API (https://dev.twitch.tv/console/apps)
+IGDB_CLIENT_ID=tu_igdb_client_id
+IGDB_CLIENT_SECRET=tu_igdb_client_secret
