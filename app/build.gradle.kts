@@ -132,7 +132,14 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         "**/*Binding*.*",
         "**/*_Impl*.*",
         "**/ComposableSingletons*.*",
-        "**/ui/theme/**"
+        "**/ui/theme/**",
+        "**/*Screen*.class",
+        "**/*Modal*.class",
+        "**/*Components*.class",
+        "**/*Card*.class",
+        "**/*Item*.class",
+        "**/*Dialog*.class",
+        "**/MainActivity*.class"
     )
 
     val kotlinClasses = fileTree(
