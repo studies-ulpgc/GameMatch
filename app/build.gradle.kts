@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
+    id("org.sonarqube")
     jacoco
 }
 
@@ -160,4 +161,15 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             )
         }
     )
+}
+
+sonar {
+    isSkipProject = false
+    properties {
+        property("sonar.projectKey", "GameMatch")
+        property("sonar.projectName", "GameMatch")
+        property("sonar.host.url", "http://localhost:9000")
+        property("sonar.java.binaries", "build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")
+        property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+    }
 }
