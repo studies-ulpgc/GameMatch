@@ -1,5 +1,6 @@
 package com.pamn.gamematch.ui.profile
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pamn.gamematch.R
@@ -13,24 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-data class ProfileUiState(
-    val username: String = "",
-    val email: String = "",
-    val birthYear: String = "",
-    val selectedGenres: Set<String> = emptySet(),
-    val priceRange: ClosedFloatingPointRange<Float> = 0f..70f,
-    val onlyReleased: Boolean = true,
-    val profilePictureUrl: String = "https://api.dicebear.com/7.x/bottts/png?seed=default",
-    val isLoading: Boolean = true,
-    val isEditing: Boolean = false,
-    val isSaving: Boolean = false,
-    val isSyncingIgdb: Boolean = false,
-    val showPasswordDialog: Boolean = false,
-    val showDeleteDialog: Boolean = false,
-    val showAvatarSelector: Boolean = false,
-    val userMessage: UiText? = null
-)
 
 class ProfileViewModel(
     private val authRepository: AuthRepository,
@@ -56,18 +39,15 @@ class ProfileViewModel(
                             selectedGenres = user.preferredGenres.toSet(),
                             priceRange = user.minPrice..user.maxPrice,
                             onlyReleased = user.onlyReleased,
-                            profilePictureUrl = user.profilePictureUrl.ifBlank { "https://api.dicebear.com/7.x/bottts/png?seed=default" },
+                            profilePictureUrl = user.profilePictureUrl.ifBlank {
+                                "https://api.dicebear.com/7.x/bottts/png?seed=default"
+                            },
                             isLoading = false
                         )
                     }
                 }
                 .onFailure {
-                    _uiState.update { state ->
-                        state.copy(
-                            email = email,
-                            isLoading = false
-                        )
-                    }
+                    _uiState.update { state -> state.copy(email = email, isLoading = false) }
                 }
         }
     }
@@ -179,51 +159,51 @@ class ProfileViewModel(
 
     fun updatePassword(newPass: String, onSuccess: (() -> Unit)? = null) {
         authRepository.updatePassword(newPass) { success, err ->
-            if (success) {
-                _uiState.update {
-                    it.copy(
-                        showPasswordDialog = false,
-                        userMessage = UiText.StringResource(R.string.profile_password_updated_success)
-                    )
-                }
-                onSuccess?.invoke()
-            } else {
-                _uiState.update {
-                    it.copy(
-                        userMessage = err?.let { msg -> UiText.DynamicString(msg) }
-                            ?: UiText.StringResource(R.string.profile_password_update_error)
-                    )
-                }
-            }
+            handleAccountActionResult(
+                success = success,
+                error = err,
+                successMsgRes = R.string.profile_password_updated_success,
+                fallbackErrorRes = R.string.profile_password_update_error,
+                onSuccessState = { it.copy(showPasswordDialog = false) },
+                onSuccessCallback = onSuccess
+            )
         }
     }
 
     fun deleteAccount(onLogout: () -> Unit) {
         authRepository.deleteAccount { success, err ->
-            if (success) {
-                _uiState.update {
-                    it.copy(
-                        showDeleteDialog = false,
-                        userMessage = UiText.StringResource(R.string.profile_account_deleted)
-                    )
-                }
-                onLogout()
-            } else {
-                _uiState.update {
-                    it.copy(
-                        userMessage = err?.let { msg -> UiText.DynamicString(msg) }
-                            ?: UiText.StringResource(R.string.profile_delete_error)
-                    )
-                }
-            }
+            handleAccountActionResult(
+                success = success,
+                error = err,
+                successMsgRes = R.string.profile_account_deleted,
+                fallbackErrorRes = R.string.profile_delete_error,
+                onSuccessState = { it.copy(showDeleteDialog = false) },
+                onSuccessCallback = onLogout
+            )
         }
+    }
+
+    private fun handleAccountActionResult(
+        success: Boolean,
+        error: String?,
+        @StringRes successMsgRes: Int,
+        @StringRes fallbackErrorRes: Int,
+        onSuccessState: (ProfileUiState) -> ProfileUiState,
+        onSuccessCallback: (() -> Unit)?
+    ) {
+        if (success) {
+            _uiState.update { onSuccessState(it).copy(userMessage = UiText.StringResource(successMsgRes)) }
+            onSuccessCallback?.invoke()
+            return
+        }
+        val errorMsg = error?.let { UiText.DynamicString(it) } ?: UiText.StringResource(fallbackErrorRes)
+        _uiState.update { it.copy(userMessage = errorMsg) }
     }
 
     fun syncCatalogFromIgdb() {
         _uiState.update { it.copy(isSyncingIgdb = true) }
         viewModelScope.launch {
-            val result = gameRepository.syncCatalogFromIgdb()
-            result
+            gameRepository.syncCatalogFromIgdb()
                 .onSuccess { count ->
                     _uiState.update {
                         it.copy(

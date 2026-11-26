@@ -1,10 +1,12 @@
 package com.pamn.gamematch.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pamn.gamematch.data.model.GameRoom
 import com.pamn.gamematch.data.model.UserProfile
+import com.pamn.gamematch.utils.LocaleUtils
 import kotlinx.coroutines.tasks.await
 
 class CommunityRepository(
@@ -13,49 +15,16 @@ class CommunityRepository(
 ) {
     fun getCurrentUserId(): String? = auth.currentUser?.uid
 
-    /**
-     * Obtiene los perfiles de usuario de la colección 'users'.
-     */
     suspend fun getCommunityUsers(): Result<List<UserProfile>> {
         return try {
             val querySnapshot = db.collection("users").get().await()
-            val profiles = querySnapshot.documents.mapNotNull { doc ->
-                val uid = doc.id
-                val username = doc.getString("username") ?: ""
-                val email = doc.getString("email") ?: ""
-                val birthYear = doc.getString("birthYear") ?: ""
-                val language = com.pamn.gamematch.utils.LocaleUtils.normalizeLanguage(doc.getString("language"))
-                val minPrice = (doc.getDouble("minPrice") ?: 0.0)
-                val maxPrice = (doc.getDouble("maxPrice") ?: 100.0)
-                val onlyReleased = doc.getBoolean("onlyReleased") ?: true
-                val isDarkMode = doc.getBoolean("isDarkMode") ?: true
-                val preferredGenres = (doc.get("preferredGenres") as? List<*>)
-                    ?.filterIsInstance<String>() ?: emptyList()
-                val profilePictureUrl = doc.getString("profilePictureUrl") ?: ""
-
-                UserProfile(
-                    uid = uid,
-                    username = username,
-                    email = email,
-                    birthYear = birthYear,
-                    language = language,
-                    minPrice = minPrice,
-                    maxPrice = maxPrice,
-                    onlyReleased = onlyReleased,
-                    isDarkMode = isDarkMode,
-                    preferredGenres = preferredGenres,
-                    profilePictureUrl = profilePictureUrl
-                )
-            }
+            val profiles = querySnapshot.documents.map { it.toUserProfile() }
             Result.success(profiles)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    /**
-     * Obtiene las salas de juego desde la colección 'rooms' ordenadas por timestamp descendente.
-     */
     suspend fun getRooms(): Result<List<GameRoom>> {
         return try {
             val querySnapshot = db.collection("rooms").get().await()
@@ -84,9 +53,6 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Crea una nueva sala en la colección 'rooms'.
-     */
     suspend fun createRoom(room: GameRoom): Result<Unit> {
         return try {
             val data = hashMapOf(
@@ -109,9 +75,6 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Actualiza los datos de una sala existente en Cloud Firestore.
-     */
     suspend fun updateRoom(
         roomId: String,
         gameTitle: String,
@@ -137,9 +100,6 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Elimina una sala existente de la colección 'rooms' en Cloud Firestore.
-     */
     suspend fun deleteRoom(roomId: String): Result<Unit> {
         return try {
             db.collection("rooms").document(roomId).delete().await()
@@ -149,14 +109,24 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Añade un usuario a los miembros de la sala e incrementa atómicamente el contador de jugadores.
-     */
-    suspend fun joinRoom(roomId: String, userId: String): Result<Unit> {
+    suspend fun joinRoom(roomId: String, userId: String): Result<Unit> =
+        updateRoomMembership(roomId, FieldValue.arrayUnion(userId), 1L)
+
+    suspend fun leaveRoom(roomId: String, userId: String): Result<Unit> =
+        updateRoomMembership(roomId, FieldValue.arrayRemove(userId), -1L)
+
+    suspend fun removeMemberFromRoom(roomId: String, memberUid: String): Result<Unit> =
+        updateRoomMembership(roomId, FieldValue.arrayRemove(memberUid), -1L)
+
+    private suspend fun updateRoomMembership(
+        roomId: String,
+        memberOperation: FieldValue,
+        playerDelta: Long
+    ): Result<Unit> {
         return try {
             db.collection("rooms").document(roomId).update(
-                "members", FieldValue.arrayUnion(userId),
-                "currentPlayers", FieldValue.increment(1)
+                "members", memberOperation,
+                "currentPlayers", FieldValue.increment(playerDelta)
             ).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -164,55 +134,12 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Remueve un usuario de los miembros de la sala y decrementa atómicamente el contador de jugadores.
-     */
-    suspend fun leaveRoom(roomId: String, userId: String): Result<Unit> {
-        return try {
-            db.collection("rooms").document(roomId).update(
-                "members", FieldValue.arrayRemove(userId),
-                "currentPlayers", FieldValue.increment(-1)
-            ).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Expulsa a un miembro específico de una sala por parte del anfitrión en Cloud Firestore.
-     */
-    suspend fun removeMemberFromRoom(roomId: String, memberUid: String): Result<Unit> {
-        return try {
-            db.collection("rooms").document(roomId).update(
-                "members", FieldValue.arrayRemove(memberUid),
-                "currentPlayers", FieldValue.increment(-1)
-            ).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Consulta la información de perfil de una lista de UIDs de miembros.
-     */
     suspend fun getMembersProfiles(memberUids: List<String>): Result<List<UserProfile>> {
         if (memberUids.isEmpty()) return Result.success(emptyList())
         return try {
             val querySnapshot = db.collection("users").get().await()
             val profiles = querySnapshot.documents.mapNotNull { doc ->
-                if (doc.id in memberUids) {
-                    UserProfile(
-                        uid = doc.id,
-                        username = doc.getString("username") ?: "Jugador",
-                        email = doc.getString("email") ?: "",
-                        birthYear = doc.getString("birthYear") ?: "",
-                        language = com.pamn.gamematch.utils.LocaleUtils.normalizeLanguage(doc.getString("language")),
-                        preferredGenres = (doc.get("preferredGenres") as? List<*>)
-                            ?.filterIsInstance<String>() ?: emptyList()
-                    )
-                } else null
+                if (doc.id in memberUids) doc.toUserProfile(defaultUsername = "Jugador") else null
             }
             Result.success(profiles)
         } catch (e: Exception) {
@@ -220,9 +147,6 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Guarda la relación de seguimiento en la subcolección 'users/{currentUid}/following/{targetUserId}'.
-     */
     suspend fun followUser(targetUserId: String): Result<Unit> {
         val currentUid = getCurrentUserId()
             ?: return Result.failure(IllegalStateException("Usuario no autenticado"))
@@ -238,9 +162,6 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Elimina el documento de la subcolección 'users/{currentUid}/following/{targetUserId}'.
-     */
     suspend fun unfollowUser(targetUserId: String): Result<Unit> {
         val currentUid = getCurrentUserId()
             ?: return Result.failure(IllegalStateException("Usuario no autenticado"))
@@ -255,20 +176,33 @@ class CommunityRepository(
         }
     }
 
-    /**
-     * Consulta la subcolección 'following' del usuario autenticado y devuelve los UIDs seguidos.
-     */
     suspend fun getFollowingUserIds(): Result<List<String>> {
-        val currentUid = getCurrentUserId()
-            ?: return Result.success(emptyList())
+        val currentUid = getCurrentUserId() ?: return Result.success(emptyList())
 
         return try {
             val snapshot = db.collection("users").document(currentUid)
                 .collection("following").get().await()
-            val followingIds = snapshot.documents.map { it.id }
-            Result.success(followingIds)
+            Result.success(snapshot.documents.map { it.id })
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun DocumentSnapshot.toUserProfile(defaultUsername: String = ""): UserProfile {
+        val preferredGenres = (get("preferredGenres") as? List<*>)
+            ?.filterIsInstance<String>() ?: emptyList()
+        return UserProfile(
+            uid = id,
+            username = getString("username") ?: defaultUsername,
+            email = getString("email") ?: "",
+            birthYear = getString("birthYear") ?: "",
+            language = LocaleUtils.normalizeLanguage(getString("language")),
+            minPrice = getDouble("minPrice") ?: 0.0,
+            maxPrice = getDouble("maxPrice") ?: 100.0,
+            onlyReleased = getBoolean("onlyReleased") ?: true,
+            isDarkMode = getBoolean("isDarkMode") ?: true,
+            preferredGenres = preferredGenres,
+            profilePictureUrl = getString("profilePictureUrl") ?: ""
+        )
     }
 }
